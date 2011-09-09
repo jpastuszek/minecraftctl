@@ -14,4 +14,5 @@ group :development do
   gem "roodi", "~> 2.1.0"
   gem "sinatra", ">= 1.2.6"
   gem "main", ">= 4.7.3"
+  gem "haml", ">= 3.1.3"
 end

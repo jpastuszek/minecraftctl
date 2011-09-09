@@ -128,11 +128,11 @@ class Minecraft
 
 	def stop
 		unless @running
-			collect_msg do
+			return collect_msg do
 				internal_msg "Server already stopped"
 			end
 		else
-			command('stop') do
+			return command('stop') do
 				@running = false
 				time_operation("Server stop") do
 					@out_reader.join
@@ -169,6 +169,7 @@ Main do
 
 	run do
 		require 'sinatra/base'
+		require 'haml'
 
 		Dir.chdir(params['minecraft-dir'].value)
 		$command = params['command'].value
@@ -178,37 +179,53 @@ Main do
 			minecraft.start
 
 			get '/save-all' do
-				start = Time.now
-				minecraft.save_all.join("\n")
+				@msg = minecraft.save_all
+				haml :messages
 			end
 
 			get '/start' do
-				minecraft.start.join("\n")
+				@msg = minecraft.start
+				haml :messages
 			end
 
 			get '/stop' do
-				start = Time.now
-				minecraft.stop.join("\n")
+				@msg = minecraft.stop
+				haml :messages
 			end
 
 			get '/shutdown' do
-				minecraft.stop
-				Process.kill(15, Process.pid)
+				@msg = minecraft.stop
+
+				pid = Process.pid
+				Thread.new{ sleep 1; Process.kill(15, pid)}
+
+				haml :messages
 			end
 
 			get '/inspect' do
-				minecraft.history_msg.map{|m| m.inspect}.join("\n") + "\n"
+				minecraft.archive_msg
+				@msg = minecraft.history_msg
+				haml :messages_inspect
 			end
 
 			get %r{/(.+)} do |cmd|
-				minecraft.command(cmd){sleep 1}.join("\n") + "\n"
+				@msg = minecraft.command(cmd){sleep 1}
+				haml :messages
 			end
 
 			get '/' do
 				minecraft.archive_msg
-				minecraft.history_msg.join("\n") + "\n"
+				@msg = minecraft.history_msg
+				haml :messages
+			end
+
+			template :messages do
+				'= @msg.join("\n")'
+			end
+
+			template :messages_inspect do
+				'= @msg.map{|m| m.inspect}.join("\n")'
 			end
 		end.run!
 	end
 end
-
