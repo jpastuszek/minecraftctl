@@ -1,0 +1,209 @@
+#!/usr/bin/ruby
+require 'rubygems'
+require 'main'
+require 'open3'
+require 'thread'
+
+class Message
+	def initialize(msg)
+		@msg = msg
+	end
+
+	attr_reader :msg
+
+	def to_s
+		@msg
+	end
+
+	class Internal < Message
+		def initialize(msg)
+			super(' -- ' + msg)
+		end
+	end
+
+	class Out < Message
+	end
+
+	class Err < Message
+		def initialize(line)
+			x, @time, @level, @msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
+		end
+
+		attr_reader :time, :level, :msg
+
+		def to_s
+			@msg
+		end
+	end
+end
+
+class Minecraft
+	def initialize(cmd)
+		@cmd = cmd
+		@in_queue = Queue.new
+		@out_queue = Queue.new
+
+		@running = false
+
+		@history = []
+		@recent = []
+	end
+
+	def collect_msg
+		archive_msg
+		yield
+		archive_msg
+	end
+
+	def time_operation(name)
+		start = Time.now
+		yield
+		internal_msg "#{name} finished in #{(Time.now - start).to_f}"
+	end
+
+	def running?
+		@running
+	end
+
+	def internal_msg(msg)
+		@out_queue << Message::Internal.new(msg)
+	end
+
+	def flush_msg
+		until @out_queue.empty? 
+			@recent << @out_queue.pop(true)
+		end
+	end
+
+	def wait_msg
+		loop do
+			msg = @out_queue.pop
+			@recent << msg
+			break if yield msg
+		end
+	end
+
+	def archive_msg
+		flush_msg
+		recent = @recent.dup
+		@history += @recent
+		@recent.clear
+		recent
+	end
+
+	def history_msg
+		@history
+	end
+
+	def start
+		collect_msg do
+			if @running
+				internal_msg "Server already running"
+			else
+				time_operation("Server start") do
+					@stdin, stdout, stderr = Open3.popen3(@cmd) 
+					@running = true
+
+					@out_reader = Thread.new do
+						stdout.each do |line|
+							puts "OUT: #{line}"
+							@out_queue << Message::Out.new(line)
+						end
+					end
+
+					err_reader = Thread.new do
+						stderr.each do |line|
+							puts "ERR: #{line}"
+							@out_queue << Message::Err.new(line)
+						end
+					end
+
+					wait_msg do |m|
+						m.msg =~ /Done \(([^n]*)ns\)!/
+					end
+				end
+			end
+		end
+	end
+
+	def stop
+		unless @running
+			collect_msg do
+				internal_msg "Server already stopped"
+			end
+		else
+			command('stop') do
+				@running = false
+				time_operation("Server stop") do
+					@out_reader.join
+				end
+			end
+		end
+	end
+
+	def save_all
+		command('save-all') do
+			time_operation("Save") do
+				wait_msg{|m| m.msg =~ /Save complete/}
+			end
+		end
+	end
+
+	def command(cmd)
+		raise RuntimeError, "server not running" unless @running
+		collect_msg do
+			@stdin.write("#{cmd}\n")
+			yield if block_given?
+		end
+	end
+end
+
+Main do
+	option 'command', 'c' do
+		default 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
+	end
+
+	argument 'minecraft-dir' do
+		description 'directory path to mincraft server installation directory'
+	end
+
+	run do
+		require 'sinatra/base'
+
+		Dir.chdir(params['minecraft-dir'].value)
+		$command = params['command'].value
+
+		Sinatra.new do
+			minecraft = Minecraft.new($command)
+			minecraft.start
+
+			get '/save-all' do
+				start = Time.now
+				minecraft.save_all.join("\n")
+			end
+
+			get '/start' do
+				minecraft.start.join("\n")
+			end
+
+			get '/stop' do
+				start = Time.now
+				minecraft.stop.join("\n")
+			end
+
+			get '/inspect' do
+				minecraft.history_msg.map{|m| m.inspect}.join("\n") + "\n"
+			end
+
+			get %r{/(.+)} do |cmd|
+				minecraft.command(cmd){sleep 1}.join("\n") + "\n"
+			end
+
+			get '/' do
+				minecraft.archive_msg
+				minecraft.history_msg.join("\n") + "\n"
+			end
+		end.run!
+	end
+end
+

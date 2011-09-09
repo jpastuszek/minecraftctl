@@ -12,4 +12,6 @@ group :development do
   gem "rcov", ">= 0"
   gem "reek", "~> 1.2.8"
   gem "roodi", "~> 2.1.0"
+  gem "sinatra", ">= 1.2.6"
+  gem "main", ">= 4.7.3"
 end
