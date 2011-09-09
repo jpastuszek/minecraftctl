@@ -161,6 +161,12 @@ end
 Main do
 	option 'command', 'c' do
 		default 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
+		description 'command to be used to span server'
+	end
+
+	option 'port', 'p' do
+		default 25560
+		description 'port on which the control HTTP server should be running'
 	end
 
 	argument 'minecraft-dir' do
@@ -172,60 +178,62 @@ Main do
 		require 'haml'
 
 		Dir.chdir(params['minecraft-dir'].value)
-		$command = params['command'].value
+		minecraft = Minecraft.new(params['command'].value)
 
-		Sinatra.new do
-			minecraft = Minecraft.new($command)
-			minecraft.start
+		minecraft.start
 
-			get '/save-all' do
-				@msg = minecraft.save_all
-				haml :messages
-			end
+		s = Sinatra.new
+		s.set :port, params['port'].value
 
-			get '/start' do
-				@msg = minecraft.start
-				haml :messages
-			end
+		s.get '/save-all' do
+			@msg = minecraft.save_all
+			haml :messages
+		end
 
-			get '/stop' do
-				@msg = minecraft.stop
-				haml :messages
-			end
+		s.get '/start' do
+			@msg = minecraft.start
+			haml :messages
+		end
 
-			get '/shutdown' do
-				@msg = minecraft.stop
+		s.get '/stop' do
+			@msg = minecraft.stop
+			haml :messages
+		end
 
-				pid = Process.pid
-				Thread.new{ sleep 1; Process.kill(15, pid)}
+		s.get '/shutdown' do
+			@msg = minecraft.stop
 
-				haml :messages
-			end
+			pid = Process.pid
+			Thread.new{ sleep 1; Process.kill(15, pid)}
 
-			get '/inspect' do
-				minecraft.archive_msg
-				@msg = minecraft.history_msg
-				haml :messages_inspect
-			end
+			haml :messages
+		end
 
-			get %r{/(.+)} do |cmd|
-				@msg = minecraft.command(cmd){sleep 1}
-				haml :messages
-			end
+		s.get '/inspect' do
+			minecraft.archive_msg
+			@msg = minecraft.history_msg
+			haml :messages_inspect
+		end
 
-			get '/' do
-				minecraft.archive_msg
-				@msg = minecraft.history_msg
-				haml :messages
-			end
+		s.get %r{/(.+)} do |cmd|
+			@msg = minecraft.command(cmd){sleep 1}
+			haml :messages
+		end
 
-			template :messages do
-				'= @msg.join("\n")'
-			end
+		s.get '/' do
+			minecraft.archive_msg
+			@msg = minecraft.history_msg
+			haml :messages
+		end
 
-			template :messages_inspect do
-				'= @msg.map{|m| m.inspect}.join("\n")'
-			end
-		end.run!
+		s.template :messages do
+			'= @msg.join("\n")'
+		end
+
+		s.template :messages_inspect do
+			'= @msg.map{|m| m.inspect}.join("\n")'
+		end
+
+		s.run!
 	end
 end
