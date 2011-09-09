@@ -191,6 +191,11 @@ Main do
 				minecraft.stop.join("\n")
 			end
 
+			get '/shutdown' do
+				minecraft.stop
+				Process.kill(15, Process.pid)
+			end
+
 			get '/inspect' do
 				minecraft.history_msg.map{|m| m.inspect}.join("\n") + "\n"
 			end
