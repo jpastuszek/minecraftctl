@@ -50,50 +50,8 @@ class Minecraft
 		@recent = []
 	end
 
-	def collect_msg
-		archive_msg
-		yield
-		archive_msg
-	end
-
-	def time_operation(name)
-		start = Time.now
-		yield
-		internal_msg "#{name} finished in #{(Time.now - start).to_f}"
-	end
-
 	def running?
 		@running
-	end
-
-	def internal_msg(msg)
-		@out_queue << Message::Internal.new(msg)
-	end
-
-	def flush_msg
-		until @out_queue.empty? 
-			@recent << @out_queue.pop(true)
-		end
-	end
-
-	def wait_msg
-		loop do
-			msg = @out_queue.pop
-			@recent << msg
-			break if yield msg
-		end
-	end
-
-	def archive_msg
-		flush_msg
-		recent = @recent.dup
-		@history += @recent
-		@recent.clear
-		recent
-	end
-
-	def history_msg
-		@history
 	end
 
 	def start
@@ -112,7 +70,7 @@ class Minecraft
 						end
 					end
 
-					err_reader = Thread.new do
+					@err_reader = Thread.new do
 						stderr.each do |line|
 							puts "ERR: #{line}"
 							@out_queue << Message::Err.new(line)
@@ -137,6 +95,7 @@ class Minecraft
 				@running = false
 				time_operation("Server stop") do
 					@out_reader.join
+					@err_reader.join
 				end
 			end
 		end
@@ -150,13 +109,77 @@ class Minecraft
 		end
 	end
 
+	def list
+		command('list') do
+			wait_msg{|m| m.msg =~ /Connected players:/}
+		end
+	end
+
 	def command(cmd)
 		raise RuntimeError, "server not running" unless @running
 		collect_msg do
 			@stdin.write("#{cmd}\n")
-			yield if block_given?
+			if block_given?
+				yield 
+			else
+				active_wait
+			end
 		end
 	end
+
+	def history
+		archive_msg
+		@history
+	end
+
+	private
+
+	def flush_msg
+		until @out_queue.empty? 
+			@recent << @out_queue.pop(true)
+		end
+	end
+
+	def archive_msg
+		flush_msg
+		recent = @recent.dup
+		@history += @recent
+		@recent.clear
+		recent
+	end
+
+	def collect_msg
+		archive_msg
+		yield
+		archive_msg
+	end
+
+	def internal_msg(msg)
+		@out_queue << Message::Internal.new(msg)
+	end
+
+	def time_operation(name)
+		start = Time.now
+		yield
+		internal_msg "#{name} finished in #{(Time.now - start).to_f}"
+	end
+
+	def wait_msg(discard = false)
+		loop do
+			msg = @out_queue.pop
+			if yield msg
+				@recent << msg unless discard
+				break
+			end
+			@recent << msg
+		end
+	end
+
+	def active_wait
+		@stdin.write("list\n")
+		wait_msg(true){|m| m.msg =~ /Connected players:/}
+	end
+
 end
 
 class Daemon
@@ -267,20 +290,23 @@ Main do
 			haml :messages
 		end
 
+		s.get '/list' do
+			@msg = minecraft.list
+			haml :messages
+		end
+
 		s.get '/inspect' do
-			minecraft.archive_msg
-			@msg = minecraft.history_msg
+			@msg = minecraft.history
 			haml :messages_inspect
 		end
 
 		s.get %r{/(.+)} do |cmd|
-			@msg = minecraft.command(cmd){sleep 1}
+			@msg = minecraft.command(cmd)
 			haml :messages
 		end
 
 		s.get '/' do
-			minecraft.archive_msg
-			@msg = minecraft.history_msg
+			@msg = minecraft.history
 			haml :messages
 		end
 
