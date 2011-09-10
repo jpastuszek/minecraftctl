@@ -295,6 +295,23 @@ Main do
 			haml :messages
 		end
 
+		s.get '/help' do
+			start = false
+			@msg = minecraft.command('help').
+			map{|m| m.msg}.
+			select do |m|
+				next true if start
+				if m =~ /Console commands:/
+					start = true 
+					next false
+				end
+			end.
+			map{|m| m.sub(/help  or  \?/, 'serverhelp ')}.
+			map{|m| m.sub(/^( |\t)*/, '')}
+
+			haml :messages
+		end
+
 		s.get '/inspect' do
 			@msg = minecraft.history
 			haml :messages_inspect
