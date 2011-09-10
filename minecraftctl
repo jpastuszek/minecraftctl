@@ -1,0 +1,38 @@
+#!/usr/bin/ruby
+require 'rubygems'
+require 'main'
+require 'httpclient'
+
+Main do
+	description 'controls Minecraft via minecraftctlserver'
+	
+	option 'server', 's' do
+		default 'localhost'
+		description 'minecraftctlserver address'
+	end
+
+	option 'port', 'p' do
+		default 25560
+		description 'minecraftctlserver port'
+	end
+
+	argument 'command' do
+		description 'command to send to Minecraft server: try "serverhelp"'
+	end
+
+	run do
+		c = HTTPClient.new
+
+		begin
+			command = case params['command'].value
+				when 'serverhelp'
+					'help'
+				else
+					params['command'].value
+			end
+			puts c.get_content("http://#{params['server'].value}:#{params['port'].value}/#{command}")
+		rescue Errno::ECONNREFUSED => e
+			puts "Falied to connect to minecraftctlserver; please run minecraftctlserver: #{e}"
+		end
+	end
+end
