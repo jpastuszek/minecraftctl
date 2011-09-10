@@ -29,6 +29,7 @@ Gem::Specification.new do |s|
     "bin/minecraftctl",
     "bin/minecraftctlserver",
     "lib/minecraftctl.rb",
+    "minecraftctl.gemspec",
     "spec/minecraftctl_spec.rb",
     "spec/spec_helper.rb"
   ]
