@@ -20,6 +20,11 @@ Main do
 		description 'command to send to Minecraft server: try "serverhelp"'
 	end
 
+	argument 'arguments' do
+		required false
+		arity -1
+	end
+
 	run do
 		c = HTTPClient.new
 
@@ -30,7 +35,14 @@ Main do
 				else
 					params['command'].value
 			end
-			puts c.get_content("http://#{params['server'].value}:#{params['port'].value}/#{command}")
+
+			args = params['arguments'].values
+
+			if args.empty?
+				puts c.get_content("http://#{params['server'].value}:#{params['port'].value}/#{command}")
+			else
+				puts c.post_content("http://#{params['server'].value}:#{params['port'].value}/#{command}", args.join("\n"))
+			end
 		rescue Errno::ECONNREFUSED => e
 			puts "Falied to connect to minecraftctlserver; please run minecraftctlserver: #{e}"
 		end

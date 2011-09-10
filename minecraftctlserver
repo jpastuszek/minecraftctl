@@ -322,6 +322,12 @@ Main do
 			haml :messages
 		end
 
+		s.post %r{/(.+)} do |cmd|
+			args = request.body.read.split("\n")
+			@msg = minecraft.command(cmd + " " + args.join(' '))
+			haml :messages
+		end
+
 		s.get '/' do
 			@msg = minecraft.history
 			haml :messages
