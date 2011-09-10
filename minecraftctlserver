@@ -191,6 +191,8 @@ class Daemon
 end
 
 Main do
+	description 'lounches Minecraft server that can be controlled via HTTP'
+
 	option 'command', 'c' do
 		default 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
 		description 'command to be used to span server'
