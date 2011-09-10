@@ -3,6 +3,7 @@ require 'rubygems'
 require 'main'
 require 'open3'
 require 'thread'
+require 'pathname'
 
 class Message
 	def initialize(msg)
@@ -158,6 +159,37 @@ class Minecraft
 	end
 end
 
+class Daemon
+	def self.daemonize(pid_file, log_file = nil)
+		exit if fork
+		Process.setsid # become session leader
+		exit if fork # and exits
+		# now in child
+	
+		# try to lock before we kill stdin/out
+		lock(pid_file)
+
+		if log_file
+			log = File.open(log_file, 'a')
+		else
+			log = '/dev/null'
+		end
+
+		# disconnect
+		STDIN.reopen '/dev/null'
+		STDOUT.reopen log
+		STDERR.reopen log
+	end
+
+	def self.lock(pid_file)
+		pf = File.open(pid_file, 'r+')
+		fail "Server already running with pid: #{pf.read}" unless pf.flock(File::LOCK_EX|File::LOCK_NB)
+		pf.truncate(0)
+		pf.write(Process.pid.to_s)
+		pf.flush
+	end
+end
+
 Main do
 	option 'command', 'c' do
 		default 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
@@ -169,15 +201,39 @@ Main do
 		description 'port on which the control HTTP server should be running'
 	end
 
+	option 'foreground', 'f' do
+		description 'don\'t daemonize'
+	end
+
+	option 'pid-file', 'P' do
+		description 'pid file relative to minecraft-dir'
+		default 'minecraftctlserver.pid'
+	end
+
+	option 'log-file', 'l' do
+		description 'log file relative to minecraft-dir when in not in foreground'
+		default 'minecraftctlserver.log'
+	end
+
 	argument 'minecraft-dir' do
 		description 'directory path to mincraft server installation directory'
 	end
 
 	run do
+		pid_file = Pathname.new(params['minecraft-dir'].value) + params['pid-file'].value
+		log_file = Pathname.new(params['minecraft-dir'].value) + params['log-file'].value
+
+		if params['foreground'].given?
+			Daemon.lock(pid_file)
+		else
+			Daemon.daemonize(pid_file, log_file)
+		end
+
 		require 'sinatra/base'
 		require 'haml'
 
 		Dir.chdir(params['minecraft-dir'].value)
+
 		minecraft = Minecraft.new(params['command'].value)
 
 		minecraft.start
