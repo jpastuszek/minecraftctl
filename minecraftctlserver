@@ -266,22 +266,22 @@ Main do
 		s = Sinatra.new
 		s.set :port, params['port'].value
 
-		s.get '/save-all' do
+		s.post '/save-all' do
 			@msg = minecraft.save_all
 			haml :messages
 		end
 
-		s.get '/start' do
+		s.post '/start' do
 			@msg = minecraft.start
 			haml :messages
 		end
 
-		s.get '/stop' do
+		s.post '/stop' do
 			@msg = minecraft.stop
 			haml :messages
 		end
 
-		s.get '/shutdown' do
+		s.post '/shutdown' do
 			@msg = minecraft.stop
 
 			pid = Process.pid
@@ -290,8 +290,9 @@ Main do
 			haml :messages
 		end
 
-		s.get '/list' do
-			@msg = minecraft.list
+		s.post %r{/(.+)} do |cmd|
+			args = request.body.read.split("\n")
+			@msg = minecraft.command(cmd + " " + args.join(' '))
 			haml :messages
 		end
 
@@ -308,7 +309,14 @@ Main do
 			end.
 			map{|m| m.sub(/help  or  \?/, 'serverhelp ')}.
 			map{|m| m.sub(/^( |\t)*/, '')}
+			@msg << "log                       show recent server messages"
+			@msg << "inspect                   inspect recent server messages"
 
+			haml :messages
+		end
+
+		s.get '/list' do
+			@msg = minecraft.list
 			haml :messages
 		end
 
@@ -317,19 +325,13 @@ Main do
 			haml :messages_inspect
 		end
 
+		s.get '/log' do
+			@msg = minecraft.history
+			haml :messages
+		end
+
 		s.get %r{/(.+)} do |cmd|
 			@msg = minecraft.command(cmd)
-			haml :messages
-		end
-
-		s.post %r{/(.+)} do |cmd|
-			args = request.body.read.split("\n")
-			@msg = minecraft.command(cmd + " " + args.join(' '))
-			haml :messages
-		end
-
-		s.get '/' do
-			@msg = minecraft.history
 			haml :messages
 		end
 
