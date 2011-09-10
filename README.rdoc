@@ -4,8 +4,13 @@ Allows running Minecraft server in background (daemon) and send commands, stop, 
 
 == Usage
 
-Lounch *minecraftctlserver <path to minecraft server install dir>*
-See *minecraftctl serverhelp* for server commands
+Lounch Minecraft server with:
+
+    $ minecraftctlserver <path to minecraft server install dir>
+
+And control it with 'minecraftctl', for help try:
+
+    $ minecraftctl serverhelp
 
 == Contributing to minecraftctl
  
