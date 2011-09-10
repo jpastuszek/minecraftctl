@@ -1,6 +1,11 @@
 = minecraftctl
 
-Description goes here.
+Allows running Minecraft server in background (daemon) and send commands, stop, start etc. with minecraftctl command.
+
+== Usage
+
+Lounch *minecraftctlserver <path to minecraft server install dir>*
+See *minecraftctl serverhelp* for server commands
 
 == Contributing to minecraftctl
  
