@@ -13,32 +13,70 @@ class Message
 	attr_reader :msg
 
 	def to_s
-		@msg
+		@msg.dup
 	end
 
 	class Internal < Message
 		def initialize(msg)
-			super(' -- ' + msg)
+			super(msg)
 		end
 	end
 
 	class Out < Message
+		def initialize(msg)
+			super(msg)
+		end
 	end
 
 	class Err < Message
 		def initialize(line)
-			x, @time, @level, @msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
+			x, @time, @level, msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
+			super(msg)
 		end
 
-		attr_reader :time, :level, :msg
-
-		def to_s
-			@msg
-		end
+		attr_reader :time, :level
 	end
 end
 
 class Minecraft
+	class Output
+		def initialize(queue, history)
+			@queue = queue
+			@history = history
+			@brake_cond = nil
+			flush
+		end
+
+		def wait(discard = false, &block)
+			@brake_cond = block
+			@discard = discard
+		end
+
+		def flush
+			until @queue.empty? 
+				msg = @queue.pop(true)
+				@history << msg
+				yield msg if block_given?
+			end
+		end
+
+		def put(msg)
+			@history << msg
+		end
+
+		def each
+			loop do
+				msg = @queue.pop
+				@history << msg
+				if @brake_cond and @brake_cond.call(msg)
+					yield msg unless @discard
+					return
+				end
+				yield msg
+			end
+		end
+	end
+
 	def initialize(cmd)
 		@cmd = cmd
 		@in_queue = Queue.new
@@ -47,7 +85,31 @@ class Minecraft
 		@running = false
 
 		@history = []
-		@recent = []
+
+		@output = Output.new(@out_queue, @history)
+
+		@collector = nil
+		@processor = nil
+	end
+
+	def transaction(&block)
+		@transaction = block
+		self
+	end
+
+	def process(&block)
+		@processor = block	
+		self
+	end
+
+	# start processing
+	def each(&block)
+		@collector = block
+		@output.flush
+		instance_eval &@transaction
+		@output.flush do |msg|
+			collect(msg)
+		end
 	end
 
 	def running?
@@ -55,31 +117,31 @@ class Minecraft
 	end
 
 	def start
-		collect_msg do
-			if @running
-				internal_msg "Server already running"
-			else
-				time_operation("Server start") do
-					@stdin, stdout, stderr = Open3.popen3(@cmd) 
-					@running = true
+		if @running
+			internal_msg "Server already running"
+		else
+			time_operation("Server start") do
+				@stdin, stdout, stderr = Open3.popen3(@cmd) 
+				@running = true
 
-					@out_reader = Thread.new do
-						stdout.each do |line|
-							puts "OUT: #{line}"
-							@out_queue << Message::Out.new(line)
-						end
+				@out_reader = Thread.new do
+					stdout.each do |line|
+						m = Message::Out.new(line)
+						puts m
+						@out_queue << m
 					end
+				end
 
-					@err_reader = Thread.new do
-						stderr.each do |line|
-							puts "ERR: #{line}"
-							@out_queue << Message::Err.new(line)
-						end
+				@err_reader = Thread.new do
+					stderr.each do |line|
+						m = Message::Err.new(line)
+						puts m
+						@out_queue << m
 					end
+				end
 
-					wait_msg do |m|
-						m.msg =~ /Done \(([^n]*)ns\)!/
-					end
+				wait_msg do |m|
+					m.msg =~ /Done \(([^n]*)ns\)!/
 				end
 			end
 		end
@@ -87,16 +149,17 @@ class Minecraft
 
 	def stop
 		unless @running
-			return collect_msg do
-				internal_msg "Server already stopped"
-			end
+			internal_msg "Server already stopped"
 		else
-			return command('stop') do
+			command('stop') do
 				@running = false
 				time_operation("Server stop") do
 					@out_reader.join
 					@err_reader.join
+					internal_msg "Server stopped"
 				end
+
+				wait_msg{|m| m.msg == "Server stopped"}
 			end
 		end
 	end
@@ -117,41 +180,22 @@ class Minecraft
 
 	def command(cmd)
 		raise RuntimeError, "server not running" unless @running
-		collect_msg do
-			@stdin.write("#{cmd}\n")
-			if block_given?
-				yield 
-			else
-				active_wait
-			end
+		@stdin.write("#{cmd}\n")
+		if block_given?
+			yield 
+		else
+			active_wait
 		end
 	end
 
-	def history
-		archive_msg
-		@history
-	end
+	attr_reader :history
 
 	private
 
-	def flush_msg
-		until @out_queue.empty? 
-			@recent << @out_queue.pop(true)
-		end
-	end
-
-	def archive_msg
-		flush_msg
-		recent = @recent.dup
-		@history += @recent
-		@recent.clear
-		recent
-	end
-
-	def collect_msg
-		archive_msg
-		yield
-		archive_msg
+	def collect(msg)
+		msg = @processor.call(msg) if @processor
+		return unless msg
+		@collector.call(msg.to_s + "\n") if @collector
 	end
 
 	def internal_msg(msg)
@@ -164,14 +208,13 @@ class Minecraft
 		internal_msg "#{name} finished in #{(Time.now - start).to_f}"
 	end
 
-	def wait_msg(discard = false)
-		loop do
-			msg = @out_queue.pop
-			if yield msg
-				@recent << msg unless discard
-				break
-			end
-			@recent << msg
+	def wait_msg(discard = false, &block)
+		# set wait contition
+		@output.wait(discard, &block)
+
+		# pass messages to collector if one defined
+		@output.each do |msg|
+			collect(msg)
 		end
 	end
 
@@ -267,57 +310,63 @@ Main do
 		s.set :port, params['port'].value
 
 		s.post '/save-all' do
-			@msg = minecraft.save_all
-			haml :messages
+			minecraft.transaction do
+				save_all
+			end
 		end
 
 		s.post '/start' do
-			@msg = minecraft.start
-			haml :messages
+			minecraft.transaction do
+				start
+			end
 		end
 
 		s.post '/stop' do
-			@msg = minecraft.stop
-			haml :messages
+			minecraft.transaction do
+				stop
+			end
 		end
 
 		s.post '/shutdown' do
-			@msg = minecraft.stop
+			minecraft.transaction do
+				stop
 
-			pid = Process.pid
-			Thread.new{ sleep 1; Process.kill(15, pid)}
-
-			haml :messages
+				pid = Process.pid
+				Thread.new{ sleep 1; Process.kill(15, pid)}
+			end
 		end
 
 		s.post %r{/(.+)} do |cmd|
 			args = request.body.read.split("\n")
-			@msg = minecraft.command(cmd + " " + args.join(' '))
-			haml :messages
+			minecraft.transaction do
+				command(cmd + " " + args.join(' '))
+			end
 		end
 
 		s.get '/help' do
 			start = false
-			@msg = minecraft.command('help').
-			map{|m| m.msg}.
-			select do |m|
-				next true if start
-				if m =~ /Console commands:/
+			minecraft.transaction do
+				command('help')
+				internal_msg "log                       show recent server messages"
+				internal_msg "inspect                   inspect recent server messages"
+			end.process do |msg|
+				msg = msg.to_s
+				if msg =~ /Console commands:/
 					start = true 
-					next false
+					next
 				end
-			end.
-			map{|m| m.sub(/help  or  \?/, 'serverhelp ')}.
-			map{|m| m.sub(/^( |\t)*/, '')}
-			@msg << "log                       show recent server messages"
-			@msg << "inspect                   inspect recent server messages"
+				next unless start
 
-			haml :messages
+				msg.sub!(/help  or  \?/, 'serverhelp ')
+				msg.sub!(/^( |\t)*/, '')
+				msg
+			end
 		end
 
 		s.get '/list' do
-			@msg = minecraft.list
-			haml :messages
+			minecraft.transaction do
+				minecraft.list
+			end
 		end
 
 		s.get '/inspect' do
@@ -327,11 +376,6 @@ Main do
 
 		s.get '/log' do
 			@msg = minecraft.history
-			haml :messages
-		end
-
-		s.get %r{/(.+)} do |cmd|
-			@msg = minecraft.command(cmd)
 			haml :messages
 		end
 
