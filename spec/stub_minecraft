@@ -1,0 +1,49 @@
+#!/usr/bin/ruby
+
+def out(line)
+	STDOUT << line + "\n"
+	STDOUT.flush
+end
+
+def err(line)
+	STDERR << line + "\n"
+	STDERR.flush
+end
+
+out '151 recipes'
+out '16 achievements'
+err '2011-09-10 12:58:55 [INFO] Starting minecraft server version Beta 1.7.3'
+err '2011-09-10 12:58:55 [WARNING] **** NOT ENOUGH RAM!'
+err '2011-09-10 12:58:55 [WARNING] To start the server with more ram, launch it as "java -Xmx1024M -Xms1024M -jar minecraft_server.jar"'
+err '2011-09-10 12:58:55 [INFO] Loading properties'
+err '2011-09-10 12:58:55 [INFO] Starting Minecraft server on *:25565'
+err '2011-09-10 12:58:55 [WARNING] **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!'
+err '2011-09-10 12:58:55 [WARNING] The server will make no attempt to authenticate usernames. Beware.'
+err '2011-09-10 12:58:55 [WARNING] While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.'
+err '2011-09-10 12:58:55 [WARNING] To change this, set "online-mode" to "true" in the server.settings file.'
+err '2011-09-10 12:58:55 [INFO] Preparing level "world"'
+err '2011-09-10 12:58:55 [INFO] Preparing start region for level 0'
+err '2011-09-10 12:58:56 [INFO] Preparing spawn area: 32%'
+err '2011-09-10 12:58:57 [INFO] Preparing spawn area: 77%'
+err '2011-09-10 12:58:58 [INFO] Preparing start region for level 1'
+err '2011-09-10 12:58:59 [INFO] Preparing spawn area: 4%'
+err '2011-09-10 12:59:00 [INFO] Preparing spawn area: 52%'
+err '2011-09-10 12:59:01 [INFO] Preparing spawn area: 97%'
+err '2011-09-10 12:59:01 [INFO] Done (5887241893ns)! For help, type "help" or "?"'
+
+running = true
+
+loop do
+	case gets
+		when "list\n"
+			err '2011-09-20 14:42:04 [INFO] Connected players: kazuya'
+		when "stop\n"
+			err '2011-09-19 22:12:00 [INFO] Stopping server'
+			err '2011-09-19 22:12:00 [INFO] Saving chunks'
+			err '2011-09-19 22:12:00 [INFO] Saving chunks'
+			exit
+		else
+			err '2011-09-20 14:42:52 [INFO] Unknown console command. Type "help" for help.'
+	end
+end
+
