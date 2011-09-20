@@ -1,4 +1,6 @@
 require 'timeout'
+require 'open4'
+Thread.abort_on_exception = true
 
 class Message
 	def initialize(msg)
@@ -32,6 +34,7 @@ class Message
 	class Err < Message
 		def initialize(line)
 			x, @time, @level, msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
+      msg = line unless @time and @level and msg
 			super(msg)
 		end
 
@@ -133,30 +136,40 @@ class Minecraft
 			internal_msg "Server already running"
 		else
 			time_operation("Server start") do
-				internal_msg "Starting minecraft: #{@cmd}"
-				@stdin, @stdout, @stderr = Open3.popen3(@cmd) 
-				raise StartupFailedError, @cmd if @stdout.eof?
-				@running = true
+        begin
+          internal_msg "Starting minecraft: #{@cmd}"
 
-				@out_reader = Thread.new do
-					@stdout.each do |line|
-						@out_queue << Message::Out.new(line.strip)
-					end
-					internal_msg "Minecraft exits"
-					@running = false
-				end
+          pid, @stdin, stdout, stderr = Open4::popen4(@cmd)
 
-				@err_reader = Thread.new do
-					@stderr.each do |line|
-						@out_queue << Message::Err.new(line.strip)
-					end
-				end
+          @out_reader = Thread.new do
+            stdout.each do |line|
+              #p line
+              @out_queue << Message::Out.new(line.strip)
+            end
 
-				wait_msg do |m|
-					m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
-				end
+            internal_msg "Minecraft exits"
+            @running = false
+          end
 
-				raise StartupFailedError,  @cmd unless running?
+          @err_reader = Thread.new do
+            stderr.each do |line|
+              #p line
+              @out_queue << Message::Err.new(line.strip)
+            end
+          end
+
+          internal_msg "Started server process with pid: #{pid}"
+
+          @running = true
+
+          wait_msg do |m|
+            m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
+          end
+
+          raise StartupFailedError, @cmd unless running?
+        rescue Errno::ENOENT # failed to exec
+          raise StartupFailedError, @cmd
+        end
 			end
 		end
 	end

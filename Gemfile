@@ -16,4 +16,5 @@ group :development do
   gem "main", ">= 4.7.3"
   gem "haml", ">= 3.1.3"
   gem "httpclient", ">= 2.2.1"
+  gem "open4", ">= 1.1.0"
 end
