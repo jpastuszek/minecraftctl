@@ -104,12 +104,6 @@ class Minecraft
 		@running = false
 
 		@collector = nil
-		@processor = nil
-	end
-
-	def process(&block)
-		@processor = block	
-		self
 	end
 
   def with_message_collector(collector, &operations)
@@ -225,8 +219,6 @@ class Minecraft
 	private
 
 	def collect(msg)
-		msg = @processor.call(msg) if @processor
-		return unless msg
 		@collector.call(msg) if @collector
 	end
 
