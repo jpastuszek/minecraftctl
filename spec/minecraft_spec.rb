@@ -70,6 +70,21 @@ describe Minecraft do
         msgs.first.should == 'Connected players: kazuya'
         msgs.should include 'Console commands:'
       end
+
+      it 'should provide #for method that shortens the code' do
+        mc = MessageCollector.for(@m) do
+          list
+          command(:help)
+        end
+
+        msgs = []
+        mc.each do |msg|
+          msgs << msg.msg
+        end
+
+        msgs.first.should == 'Connected players: kazuya'
+        msgs.should include 'Console commands:'
+      end
     end
 
 		after :all do

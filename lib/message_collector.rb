@@ -3,6 +3,12 @@ class MessageCollector
     @operation = operation
   end
 
+  def self.for(minecraft, &operations)
+    self.new do |collector|
+      minecraft.with_message_collector(collector, &operations)
+    end
+  end
+
   def collect(msg)
     @collector.call(msg)
   end
