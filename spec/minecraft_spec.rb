@@ -36,7 +36,6 @@ describe Minecraft do
     it 'should provide message history' do
       h = @m.history
       h.first.should be_kind_of Minecraft::MessageQueue::Message::Internal
-      h[2].should be_kind_of Minecraft::MessageQueue::Message::Out
       h.should have(23).items
     end
 
@@ -57,6 +56,22 @@ describe Minecraft do
       msgs = @m.history.map{|m| m.msg}
 			msgs.should include 'CONSOLE: Save complete.'
 		end
+
+    it 'should stop and start' do
+      @m.stop
+      msgs = @m.history.map{|m| m.msg}
+			msgs.should include 'Stopping server'
+      @m.running?.should == false
+
+      @m.start
+      msgs = @m.history.map{|m| m.msg}
+			msgs[-5, 5].should include 'Done (5887241893ns)! For help, type "help" or "?"'
+      @m.running?.should == true
+
+      @m.list
+      msgs = @m.history.map{|m| m.msg}
+			msgs.last.should == 'Connected players: kazuya'
+    end
 
 		after :all do
       @m.stop
