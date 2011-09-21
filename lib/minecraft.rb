@@ -102,6 +102,7 @@ class Minecraft
 		@message_queue = MessageQueue.new
 
 		@running = false
+    @server_pid = nil
 
 		@collector = nil
 	end
@@ -142,6 +143,7 @@ class Minecraft
           log "Starting minecraft: #{@cmd}"
 
           pid, @stdin, stdout, stderr = Open4::popen4(@cmd)
+          @server_pid = pid
 
           @out_reader = Thread.new do
             stdout.each do |line|
@@ -168,7 +170,10 @@ class Minecraft
             m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
           end
 
-          raise StartupFailedError, @cmd unless running?
+          unless running?
+            Process.wait(@server_pid)
+            raise StartupFailedError, @cmd 
+          end
         rescue Errno::ENOENT # failed to exec
           raise StartupFailedError, @cmd
         end
@@ -184,6 +189,7 @@ class Minecraft
 				time_operation("Server stop") do
 					@out_reader.join
 					@err_reader.join
+          Process.wait(@server_pid)
 					log "Server stopped"
 				end
 
