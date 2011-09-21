@@ -35,8 +35,8 @@ describe Minecraft do
 
     it 'should provide message history' do
       h = @m.history
-      h.first.should be_kind_of Message::Internal
-      h[2].should be_kind_of Message::Out
+      h.first.should be_kind_of Minecraft::MessageQueue::Message::Internal
+      h[2].should be_kind_of Minecraft::MessageQueue::Message::Out
       h.should have(23).items
     end
 

@@ -2,46 +2,6 @@ require 'timeout'
 require 'open4'
 Thread.abort_on_exception = true
 
-class Message
-	def initialize(msg)
-		@msg = msg
-	end
-
-	attr_reader :msg
-
-	def to_s
-		@msg
-	end
-
-	class Internal < Message
-		def initialize(msg)
-			super(msg)
-		end
-	end
-
-	class InternalError < Message
-		def initialize(msg)
-			super(msg)
-		end
-	end
-
-	class Out < Message
-		def initialize(msg)
-			super(msg)
-		end
-	end
-
-	class Err < Message
-		def initialize(line)
-			x, @time, @level, msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
-      msg = line unless @time and @level and msg
-			super(msg)
-		end
-
-		attr_reader :time, :level
-	end
-end
-
 class Minecraft
 	class HistoryQueue < Queue
 		def initialize
@@ -69,26 +29,65 @@ class Minecraft
 	end
 
   class MessageQueue < HistoryQueue
+    class Message
+      def initialize(msg)
+        @msg = msg
+      end
+
+      attr_reader :msg
+
+      def to_s
+        @msg
+      end
+
+      class Internal < Message
+        def initialize(msg)
+          super(msg)
+        end
+      end
+
+      class InternalError < Message
+        def initialize(msg)
+          super(msg)
+        end
+      end
+
+      class Out < Message
+        def initialize(msg)
+          super(msg)
+        end
+      end
+
+      class Err < Message
+        def initialize(line)
+          x, @time, @level, msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
+          msg = line unless @time and @level and msg
+          super(msg)
+        end
+
+        attr_reader :time, :level
+      end
+    end
+
     def initialize
-			@brake_cond = nil
       super
     end
 
-		def wait(discard = false, &block)
-			@brake_cond = block
-			@discard = discard
-		end
+    def out(msg)
+      push Message::Out.new(msg)
+    end
 
-		def each
-			loop do
-				msg = pop
-				if @brake_cond and @brake_cond.call(msg)
-					yield msg unless @discard
-					return
-				end
-				yield msg
-			end
-		end
+    def err(msg)
+      push Message::Err.new(msg)
+    end
+
+    def log(msg)
+      push Message::Internal.new(msg)
+    end
+
+    def error(msg)
+      push Message::InternalError.new(msg)
+    end
   end
 
 	class StartupFailedError < RuntimeError
@@ -100,11 +99,9 @@ class Minecraft
 	def initialize(cmd)
 		@cmd = cmd
 		@in_queue = Queue.new
-		@out_queue = MessageQueue.new
+		@message_queue = MessageQueue.new
 
 		@running = false
-
-		@history = []
 
 		@collector = nil
 		@processor = nil
@@ -116,14 +113,14 @@ class Minecraft
 	end
 
   def with_message_collector(collector, &operations)
-		@out_queue.flush
+		@message_queue.flush
     @collector = collector
 		begin
 			instance_eval &operations
 		rescue Timeout::Error
-			internal_error "Command timed out"
+			@message_queue.error "Command timed out"
 		ensure
-			@out_queue.flush do |msg|
+			@message_queue.flush do |msg|
 				collect(msg)
 			end
       @collector = nil
@@ -136,32 +133,32 @@ class Minecraft
 
 	def start
 		if @running
-			internal_msg "Server already running"
+			@message_queue.log "Server already running"
 		else
 			time_operation("Server start") do
         begin
-          internal_msg "Starting minecraft: #{@cmd}"
+          @message_queue.log "Starting minecraft: #{@cmd}"
 
           pid, @stdin, stdout, stderr = Open4::popen4(@cmd)
 
           @out_reader = Thread.new do
             stdout.each do |line|
               #p line
-              @out_queue << Message::Out.new(line.strip)
+              @message_queue.out(line.strip)
             end
 
-            internal_msg "Minecraft exits"
+            @message_queue.log "Minecraft exits"
             @running = false
           end
 
           @err_reader = Thread.new do
             stderr.each do |line|
               #p line
-              @out_queue << Message::Err.new(line.strip)
+              @message_queue.err(line.strip)
             end
           end
 
-          internal_msg "Started server process with pid: #{pid}"
+          @message_queue.log "Started server process with pid: #{pid}"
 
           @running = true
 
@@ -179,13 +176,13 @@ class Minecraft
 
 	def stop
 		unless @running
-			internal_msg "Server already stopped"
+			@message_queue.log "Server already stopped"
 		else
 			command('stop') do
 				time_operation("Server stop") do
 					@out_reader.join
 					@err_reader.join
-					internal_msg "Server stopped"
+					@message_queue.log "Server stopped"
 				end
 
 				wait_msg{|m| m.msg == "Server stopped"}
@@ -222,7 +219,7 @@ class Minecraft
 	end
 
   def history
-    @out_queue.history
+    @message_queue.history
   end
 
 	private
@@ -233,29 +230,23 @@ class Minecraft
 		@collector.call(msg) if @collector
 	end
 
-	def internal_msg(msg)
-		@out_queue << Message::Internal.new(msg)
-	end
-
-	def internal_error(msg)
-		@out_queue << Message::InternalError.new(msg)
-	end
-
 	def time_operation(name)
 		start = Time.now
 		yield
-		internal_msg "#{name} finished in #{(Time.now - start).to_f}"
+		@message_queue.log "#{name} finished in #{(Time.now - start).to_f}"
 	end
 
-	def wait_msg(discard = false, timeout = 20, &block)
+	def wait_msg(discard = false, timeout = 20)
 		Timeout::timeout(timeout) do
-			# set wait contition
-			@out_queue.wait(discard, &block)
+      loop do
+        msg = @message_queue.pop
+        if yield msg
+          collect(msg) unless discard
+          break
+        end
 
-			# pass messages to collector if one defined
-			@out_queue.each do |msg|
-				collect(msg)
-			end
+        collect(msg)
+      end
 		end
 	end
 
