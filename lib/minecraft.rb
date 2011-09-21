@@ -102,30 +102,25 @@ class Minecraft
 		@processor = nil
 	end
 
-	def transaction(&block)
-		@transaction = block
-		self
-	end
-
 	def process(&block)
 		@processor = block	
 		self
 	end
 
-	# start processing
-	def each(&block)
-		@collector = block
+  def with_message_collector(collector, &operations)
 		@output.flush
+    @collector = collector
 		begin
-			instance_eval &@transaction
+			instance_eval &operations
 		rescue Timeout::Error
 			internal_error "Command timed out"
 		ensure
 			@output.flush do |msg|
 				collect(msg)
 			end
+      @collector = nil
 		end
-	end
+  end
 
 	def running?
 		@running
@@ -214,14 +209,17 @@ class Minecraft
 		end
 	end
 
-	attr_reader :history
+  def history
+    @output.flush
+    @history
+  end
 
 	private
 
 	def collect(msg)
 		msg = @processor.call(msg) if @processor
 		return unless msg
-		@collector.call(msg.to_s + "\n") if @collector
+		@collector.call(msg) if @collector
 	end
 
 	def internal_msg(msg)
