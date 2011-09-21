@@ -112,7 +112,7 @@ class Minecraft
 		begin
 			instance_eval &operations
 		rescue Timeout::Error
-			@message_queue.error "Command timed out"
+			error "Command timed out"
 		ensure
 			@message_queue.flush do |msg|
 				collect(msg)
@@ -125,13 +125,21 @@ class Minecraft
 		@running
 	end
 
+  def log(msg)
+			@message_queue.log(msg)
+  end
+
+  def error(msg)
+			@message_queue.error(msg)
+  end
+
 	def start
 		if @running
-			@message_queue.log "Server already running"
+			log "Server already running"
 		else
 			time_operation("Server start") do
         begin
-          @message_queue.log "Starting minecraft: #{@cmd}"
+          log "Starting minecraft: #{@cmd}"
 
           pid, @stdin, stdout, stderr = Open4::popen4(@cmd)
 
@@ -141,7 +149,7 @@ class Minecraft
               @message_queue.out(line.strip)
             end
 
-            @message_queue.log "Minecraft exits"
+            log "Minecraft exits"
             @running = false
           end
 
@@ -152,7 +160,7 @@ class Minecraft
             end
           end
 
-          @message_queue.log "Started server process with pid: #{pid}"
+          log "Started server process with pid: #{pid}"
 
           @running = true
 
@@ -170,13 +178,13 @@ class Minecraft
 
 	def stop
 		unless @running
-			@message_queue.log "Server already stopped"
+			log "Server already stopped"
 		else
 			command('stop') do
 				time_operation("Server stop") do
 					@out_reader.join
 					@err_reader.join
-					@message_queue.log "Server stopped"
+					log "Server stopped"
 				end
 
 				wait_msg{|m| m.msg == "Server stopped"}
@@ -225,7 +233,7 @@ class Minecraft
 	def time_operation(name)
 		start = Time.now
 		yield
-		@message_queue.log "#{name} finished in #{(Time.now - start).to_f}"
+		log "#{name} finished in #{(Time.now - start).to_f}"
 	end
 
 	def wait_msg(discard = false, timeout = 20)

@@ -8,6 +8,36 @@ require 'pathname'
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 
 require 'minecraft'
+require 'message_collector'
+
+class MessageCollectorProcessed < MessageCollector
+  def initialize(&operations)
+    super(&operations)
+    @processors = []
+  end
+
+  def process(&block)
+    @processors << block
+    self
+  end
+
+  def collect(msg)
+    @processors.each do |processor|
+      msg = processor.call(msg)
+    end
+    @collector.call(msg)
+  end
+
+end
+
+class TextCollector < MessageCollectorProcessed
+  def initialize(&operations)
+    super
+    process do |msg|
+      msg.to_s + "\n"
+    end
+  end
+end
 
 class Daemon
 	def self.daemonize(pid_file, log_file = nil)
@@ -32,7 +62,7 @@ class Daemon
 	end
 
 	def self.lock(pid_file)
-		pf = File.open(pid_file, 'r+')
+		pf = File.open(pid_file, File::RDWR | File::CREAT)
 		fail "Server already running with pid: #{pf.read}" unless pf.flock(File::LOCK_EX|File::LOCK_NB)
 		pf.truncate(0)
 		pf.write(Process.pid.to_s)
@@ -94,25 +124,25 @@ Main do
 		s.set :port, params['port'].value
 
 		s.post '/save-all' do
-			minecraft.transaction do
+			TextCollector.for(minecraft) do
 				save_all
 			end
 		end
 
 		s.post '/start' do
-			minecraft.transaction do
+			TextCollector.for(minecraft) do
 				start
 			end
 		end
 
 		s.post '/stop' do
-			minecraft.transaction do
+			TextCollector.for(minecraft) do
 				stop
 			end
 		end
 
 		s.post '/shutdown' do
-			minecraft.transaction do
+			TextCollector.for(minecraft) do
 				stop
 
 				pid = Process.pid
@@ -122,34 +152,33 @@ Main do
 
 		s.post %r{/(.+)} do |cmd|
 			args = request.body.read.split("\n")
-			minecraft.transaction do
-				command(cmd + " " + args.join(' '))
+			TextCollector.for(minecraft) do
+        send(cmd.tr('-', '_').to_sym, *args)
 			end
 		end
 
 		s.get '/help' do
 			start = false
-			minecraft.transaction do
-				command('help')
-				internal_msg "log                       show recent server messages"
-				internal_msg "inspect                   inspect recent server messages"
+			TextCollector.for(minecraft) do
+        help
+				log "log                       show recent server messages"
+				log "inspect                   inspect recent server messages"
 			end.process do |msg|
-				msg = msg.to_s
-				if msg =~ /Console commands:/
-					start = true 
-					next
-				end
-				next unless start
+        msg = msg.to_s
 
-				msg.sub!(/help  or  \?/, 'serverhelp ')
-				msg.sub!(/^( |\t)*/, '')
-				msg
-			end
+        if msg =~ /Console commands:/
+          start = true 
+          next
+        end
+
+        next unless start
+        msg.sub(/help  or  \?/, 'serverhelp ').sub(/^( |\t)*/, '')
+      end
 		end
 
 		s.get '/list' do
-			minecraft.transaction do
-				minecraft.list
+			TextCollector.for(minecraft) do
+				list
 			end
 		end
 
