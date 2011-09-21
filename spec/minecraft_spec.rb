@@ -33,10 +33,29 @@ describe Minecraft do
       @m.start
 		end
 
-		it "responds to list command" do
+    it 'should provide message history' do
+      h = @m.history
+      h.first.should be_kind_of Message::Internal
+      h[2].should be_kind_of Message::Out
+      h.should have(23).items
+    end
+
+		it 'responds to list command' do
       @m.list
       msgs = @m.history.map{|m| m.msg}
 			msgs.last.should == 'Connected players: kazuya'
+		end
+
+		it 'responds to say command' do
+      @m.say('hello', 'world')
+      msgs = @m.history.map{|m| m.msg}
+			msgs.should include '[CONSOLE] hello world'
+		end
+
+		it 'responds to save_all command' do
+      @m.save_all
+      msgs = @m.history.map{|m| m.msg}
+			msgs.should include 'CONSOLE: Save complete.'
 		end
 
 		after :all do

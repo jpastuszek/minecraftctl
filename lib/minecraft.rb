@@ -199,6 +199,10 @@ class Minecraft
 		end
 	end
 
+  def method_missing(m, *args)
+    command(([m.to_s.tr('_', '-')] + args).join(' '))
+  end
+
 	def command(cmd)
 		raise RuntimeError, "server not running" unless @running
 		@stdin.write("#{cmd}\n")
