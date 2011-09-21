@@ -102,7 +102,7 @@ class Minecraft
 		@message_queue = MessageQueue.new
 
 		@running = false
-    @server_pid = nil
+    @server_pid = 0
 
 		@collector = nil
 	end
@@ -141,43 +141,61 @@ class Minecraft
 			log "Server already running"
 		else
 			time_operation("Server start") do
-        begin
-          log "Starting minecraft: #{@cmd}"
+        log "Starting minecraft: #{@cmd}"
 
-          pid, @stdin, stdout, stderr = Open4::popen4(@cmd)
-          @server_pid = pid
+        @server_thread = Thread.new do
+          begin
+            Open4::popen4(@cmd) do |pid, stdin, stdout, stderr|
+              in_writter = Thread.new do
+                begin
+                  loop do
+                    msg = @in_queue.pop
+                    stdin.write(msg)
+                  end
+                rescue IOError
+                end
+              end
 
-          @out_reader = Thread.new do
-            stdout.each do |line|
-              #p line
-              @message_queue.out(line.strip)
+              out_reader = Thread.new do
+                begin
+                  stdout.each do |line|
+                    @message_queue.out(line.strip)
+                  end
+                rescue IOError
+                end
+              end
+
+              err_reader = Thread.new do
+                begin
+                  stderr.each do |line|
+                    @message_queue.err(line.strip)
+                  end
+                rescue IOError
+                end
+              end
+
+              out_reader.join
+              err_reader.join
+              #TODO: in_writter???
             end
-
-            log "Minecraft exits"
-            @running = false
+          rescue Errno::ENOENT
           end
 
-          @err_reader = Thread.new do
-            stderr.each do |line|
-              #p line
-              @message_queue.err(line.strip)
-            end
-          end
+          log "Minecraft exits"
+          #@running = false
+        end
 
-          log "Started server process with pid: #{pid}"
+        @running = true
 
-          @running = true
+        wait_msg do |m|
+          m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
+        end
 
-          wait_msg do |m|
-            m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
-          end
+        log "Started server process with pid: #{@server_pid}"
 
-          unless running?
-            Process.wait(@server_pid)
-            raise StartupFailedError, @cmd 
-          end
-        rescue Errno::ENOENT # failed to exec
-          raise StartupFailedError, @cmd
+        unless running?
+          @server_thread.join
+          raise StartupFailedError, @cmd 
         end
 			end
 		end
@@ -189,9 +207,7 @@ class Minecraft
 		else
 			command('stop') do
 				time_operation("Server stop") do
-					@out_reader.join
-					@err_reader.join
-          Process.wait(@server_pid)
+          @server_thread.join
 					log "Server stopped"
 				end
 
@@ -220,7 +236,7 @@ class Minecraft
 
 	def command(cmd)
 		raise RuntimeError, "server not running" unless @running
-		@stdin.write("#{cmd}\n")
+		@in_queue << "#{cmd}\n"
 		if block_given?
 			yield 
 		else
@@ -259,7 +275,7 @@ class Minecraft
 	end
 
 	def active_wait
-		@stdin.write("list\n")
+		@in_queue << "list\n"
 		wait_msg(true){|m| m.msg =~ /Connected players:/}
 	end
 end
