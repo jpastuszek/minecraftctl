@@ -17,7 +17,7 @@ describe Minecraft do
 	end
 
 	it "should start up" do
-		@m = Minecraft.new(File.dirname(__FILE__) + '/stub_minecraft')
+		@m = Minecraft.new(File.dirname(__FILE__) + '/stub_server/minecraft')
     @m.start
 
     msgs = @m.history.map{|m| m.msg}
@@ -29,7 +29,7 @@ describe Minecraft do
 
 	describe 'while running' do
 		before :all do
-			@m = Minecraft.new(File.dirname(__FILE__) + '/stub_minecraft')
+			@m = Minecraft.new(File.dirname(__FILE__) + '/stub_server/minecraft')
       @m.start
 		end
 

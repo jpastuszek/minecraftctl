@@ -107,6 +107,8 @@ class Minecraft
 		@collector = nil
 	end
 
+  attr_reader :server_pid
+
   def with_message_collector(collector, &operations)
 		@message_queue.flush
     @collector = collector

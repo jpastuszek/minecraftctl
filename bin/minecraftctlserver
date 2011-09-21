@@ -76,11 +76,13 @@ Main do
 	option 'command', 'c' do
 		default 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
 		description 'command to be used to span server'
+    argument_required
 	end
 
 	option 'port', 'p' do
 		default 25560
 		description 'port on which the control HTTP server should be running'
+    argument_required
 	end
 
 	option 'foreground', 'f' do
@@ -90,15 +92,18 @@ Main do
 	option 'pid-file', 'P' do
 		description 'pid file relative to minecraft-dir'
 		default 'minecraftctlserver.pid'
+    argument_required
 	end
 
 	option 'log-file', 'l' do
 		description 'log file relative to minecraft-dir when in not in foreground'
 		default 'minecraftctlserver.log'
+    argument_required
 	end
 
 	argument 'minecraft-dir' do
 		description 'directory path to mincraft server installation directory'
+    argument_required
 	end
 
 	run do
@@ -122,6 +127,7 @@ Main do
 
 		s = Sinatra.new
 		s.set :port, params['port'].value
+    s.set :environment, 'production'
 
 		s.post '/save-all' do
 			TextCollector.for(minecraft) do
@@ -161,6 +167,7 @@ Main do
 			start = false
 			TextCollector.for(minecraft) do
         help
+				log "status                    show server status"
 				log "log                       show recent server messages"
 				log "inspect                   inspect recent server messages"
 			end.process do |msg|
@@ -182,6 +189,15 @@ Main do
 			end
 		end
 
+    s.get '/status' do
+      if minecraft.running?
+        @pid = minecraft.server_pid
+        haml :status_running
+      else
+        haml :status_stopped
+      end
+    end
+
 		s.get '/inspect' do
 			@msg = minecraft.history
 			haml :messages_inspect
@@ -192,6 +208,14 @@ Main do
 			haml :messages
 		end
 
+    s.template :status_running do
+      '= "Minecraft server is running with pid: #{@pid}"'
+    end
+
+    s.template :status_stopped do
+      '= "Minecraft server is stopped"'
+    end
+
 		s.template :messages do
 			'= @msg.join("\n")'
 		end
@@ -199,6 +223,14 @@ Main do
 		s.template :messages_inspect do
 			'= @msg.map{|m| m.inspect}.join("\n")'
 		end
+
+    s.not_found do
+      "Request '#{env['REQUEST_PATH']}' not supported, please see '/serverhelp' for details\n"
+    end
+
+    s.error do
+      "Error in minecraftctlserver while processing request '#{env['REQUEST_PATH']}': #{env['sinatra.error']}\n" 
+    end
 
 		s.run!
 	end

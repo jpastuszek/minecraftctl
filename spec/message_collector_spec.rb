@@ -19,7 +19,7 @@ describe MessageCollector do
 
 	describe 'with minecraft running' do
 		before :all do
-			@m = Minecraft.new(File.dirname(__FILE__) + '/stub_minecraft')
+			@m = Minecraft.new(File.dirname(__FILE__) + '/stub_server/minecraft')
       @m.start
 		end
   
