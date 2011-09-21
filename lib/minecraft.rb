@@ -43,35 +43,45 @@ class Message
 end
 
 class Minecraft
-	class Output
-		def initialize(queue, history)
-			@queue = queue
-			@history = history
-			@brake_cond = nil
-			flush
+	class HistoryQueue < Queue
+		def initialize
+			@history = []
+      super
 		end
+
+		def flush
+			until empty? 
+        msg = pop(true)
+				yield msg if block_given?
+			end
+		end
+
+    def history
+      flush
+      @history
+    end
+
+    def pop(blocking = false)
+				msg = super(blocking)
+				@history << msg
+        msg
+    end
+	end
+
+  class MessageQueue < HistoryQueue
+    def initialize
+			@brake_cond = nil
+      super
+    end
 
 		def wait(discard = false, &block)
 			@brake_cond = block
 			@discard = discard
 		end
 
-		def flush
-			until @queue.empty? 
-				msg = @queue.pop(true)
-				@history << msg
-				yield msg if block_given?
-			end
-		end
-
-		def put(msg)
-			@history << msg
-		end
-
 		def each
 			loop do
-				msg = @queue.pop
-				@history << msg
+				msg = pop
 				if @brake_cond and @brake_cond.call(msg)
 					yield msg unless @discard
 					return
@@ -79,7 +89,7 @@ class Minecraft
 				yield msg
 			end
 		end
-	end
+  end
 
 	class StartupFailedError < RuntimeError
 		def initialize(command)
@@ -90,13 +100,11 @@ class Minecraft
 	def initialize(cmd)
 		@cmd = cmd
 		@in_queue = Queue.new
-		@out_queue = Queue.new
+		@out_queue = MessageQueue.new
 
 		@running = false
 
 		@history = []
-
-		@output = Output.new(@out_queue, @history)
 
 		@collector = nil
 		@processor = nil
@@ -108,14 +116,14 @@ class Minecraft
 	end
 
   def with_message_collector(collector, &operations)
-		@output.flush
+		@out_queue.flush
     @collector = collector
 		begin
 			instance_eval &operations
 		rescue Timeout::Error
 			internal_error "Command timed out"
 		ensure
-			@output.flush do |msg|
+			@out_queue.flush do |msg|
 				collect(msg)
 			end
       @collector = nil
@@ -214,8 +222,7 @@ class Minecraft
 	end
 
   def history
-    @output.flush
-    @history
+    @out_queue.history
   end
 
 	private
@@ -243,10 +250,10 @@ class Minecraft
 	def wait_msg(discard = false, timeout = 20, &block)
 		Timeout::timeout(timeout) do
 			# set wait contition
-			@output.wait(discard, &block)
+			@out_queue.wait(discard, &block)
 
 			# pass messages to collector if one defined
-			@output.each do |msg|
+			@out_queue.each do |msg|
 				collect(msg)
 			end
 		end
