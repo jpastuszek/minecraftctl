@@ -1,5 +1,5 @@
 require 'timeout'
-require 'open4'
+require 'spawn'
 Thread.abort_on_exception = true
 
 class Minecraft
@@ -143,7 +143,7 @@ class Minecraft
 				begin
 					log "Starting minecraft: #{@cmd}"
 
-					pid, stdin, stdout, stderr = Open4::popen4(@cmd)
+					pid, @stdin, @stdout, @stderr = Spawn::spawn(@cmd)
 					@server_pid = pid
 
 					log "Started server process with pid: #{@server_pid}"
@@ -152,7 +152,7 @@ class Minecraft
 						begin
 							loop do
 								msg = @in_queue.pop
-								stdin.write(msg)
+								@stdin.write(msg)
 							end
 						rescue IOError, Errno::EPIPE
 						end
@@ -160,7 +160,7 @@ class Minecraft
 
 					@err_reader = Thread.new do
 						begin
-							stderr.each do |line|
+							@stderr.each do |line|
 								@message_queue.err(line.strip)
 							end
 						rescue IOError
@@ -169,13 +169,18 @@ class Minecraft
 
 					@out_reader = Thread.new do
 						begin
-							stdout.each do |line|
+							@stdout.each do |line|
 								@message_queue.out(line.strip)
 							end
 						rescue IOError
 						ensure
 							@in_writter.kill
 							@err_reader.kill
+
+							@stdin.close unless @stdin.closed?
+							@stderr.close unless @stderr.closed?
+							@stdout.close unless @stdout.closed?
+
 							log "Minecraft exits"
 						end
 					end
