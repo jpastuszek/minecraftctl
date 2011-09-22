@@ -5,7 +5,7 @@ require 'httpclient'
 
 Main do
 	description 'controls Minecraft via minecraftctlserver'
-	
+
 	option 'server', 's' do
 		default 'localhost'
 		description 'minecraftctlserver address'
@@ -48,3 +48,4 @@ Main do
 		end
 	end
 end
+

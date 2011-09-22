@@ -6,89 +6,89 @@ class Minecraft
 	class HistoryQueue < Queue
 		def initialize
 			@history = []
-      super
+			super
 		end
 
 		def flush
 			until empty? 
-        msg = pop(true)
-				yield msg if block_given?
+				msg = pop(true)
+			yield msg if block_given?
 			end
 		end
 
-    def history
-      flush
-      @history
-    end
+		def history
+			flush
+			@history
+		end
 
-    def pop(blocking = false)
-				msg = super(blocking)
-				@history << msg
-        msg
-    end
+		def pop(blocking = false)
+			msg = super(blocking)
+			@history << msg
+			msg
+		end
 	end
 
-  class MessageQueue < HistoryQueue
-    class Message
-      def initialize(msg)
-        @msg = msg
-      end
+	class MessageQueue < HistoryQueue
+		class Message
+			def initialize(msg)
+				@msg = msg
+			end
 
-      attr_reader :msg
+			attr_reader :msg
 
-      def to_s
-        @msg
-      end
+			def to_s
+				@msg
+			end
 
-      class Internal < Message
-        def initialize(msg)
-          super(msg)
-        end
-      end
+			class Internal < Message
+				def initialize(msg)
+					super(msg)
+				end
+			end
 
-      class InternalError < Message
-        def initialize(msg)
-          super(msg)
-        end
-      end
+			class InternalError < Message
+				def initialize(msg)
+					super(msg)
+				end
+			end
 
-      class Out < Message
-        def initialize(msg)
-          super(msg)
-        end
-      end
+			class Out < Message
+				def initialize(msg)
+					super(msg)
+				end
+			end
 
-      class Err < Message
-        def initialize(line)
-          x, @time, @level, msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
-          msg = line unless @time and @level and msg
-          super(msg)
-        end
+			class Err < Message
+				def initialize(line)
+					x, @time, @level, msg = *line.match(/^([^ ]* [^ ]*) \[([^\]]*)\] (.*)/)
+					msg = line unless @time and @level and msg
+					super(msg)
+				end
 
-        attr_reader :time, :level
-      end
-    end
+				attr_reader :time, :level
+			end
+		end
 
-    def initialize
-      super
-    end
+		def initialize
+			super
+		end
 
-    def out(msg)
-      push Message::Out.new(msg)
-    end
+		def out(msg)
+			push Message::Out.new(msg)
+		end
 
-    def err(msg)
-      push Message::Err.new(msg)
-    end
+		def err(msg)
+			push Message::Err.new(msg)
+		end
 
-    def log(msg)
-      push Message::Internal.new(msg)
-    end
+		def log(msg)
+			push Message::Internal.new(msg)
+		end
 
-    def error(msg)
-      push Message::InternalError.new(msg)
-    end
-  end
+		def error(msg)
+			push Message::InternalError.new(msg)
+		end
+	end
 
 	class StartupFailedError < RuntimeError
 		def initialize(command)
@@ -101,16 +101,16 @@ class Minecraft
 		@in_queue = Queue.new
 		@message_queue = MessageQueue.new
 
-    @server_pid = nil
+		@server_pid = nil
 
 		@collector = nil
 	end
 
-  attr_reader :server_pid
+	attr_reader :server_pid
 
-  def with_message_collector(collector, &operations)
+	def with_message_collector(collector, &operations)
 		@message_queue.flush
-    @collector = collector
+		@collector = collector
 		begin
 			instance_eval &operations
 		rescue Timeout::Error
@@ -119,79 +119,79 @@ class Minecraft
 			@message_queue.flush do |msg|
 				collect(msg)
 			end
-      @collector = nil
+			@collector = nil
 		end
-  end
-
-	def running?
-    @out_reader and @in_writter.alive?
 	end
 
-  def log(msg)
-			@message_queue.log(msg)
-  end
+	def running?
+		@out_reader and @in_writter.alive?
+	end
 
-  def error(msg)
-			@message_queue.error(msg)
-  end
+	def log(msg)
+		@message_queue.log(msg)
+	end
+
+	def error(msg)
+		@message_queue.error(msg)
+	end
 
 	def start
 		if running?
 			log "Server already running"
 		else
 			time_operation("Server start") do
-        begin
-          log "Starting minecraft: #{@cmd}"
+				begin
+					log "Starting minecraft: #{@cmd}"
 
-          pid, stdin, stdout, stderr = Open4::popen4(@cmd)
-          @server_pid = pid
+					pid, stdin, stdout, stderr = Open4::popen4(@cmd)
+					@server_pid = pid
 
-          log "Started server process with pid: #{@server_pid}"
+					log "Started server process with pid: #{@server_pid}"
 
-          @in_writter = Thread.new do
-            begin
-              loop do
-                msg = @in_queue.pop
-                stdin.write(msg)
-              end
-            rescue IOError, Errno::EPIPE
-            end
-          end
+					@in_writter = Thread.new do
+						begin
+							loop do
+								msg = @in_queue.pop
+								stdin.write(msg)
+							end
+						rescue IOError, Errno::EPIPE
+						end
+					end
 
-          @err_reader = Thread.new do
-            begin
-              stderr.each do |line|
-                @message_queue.err(line.strip)
-              end
-            rescue IOError
-            end
-          end
+					@err_reader = Thread.new do
+						begin
+							stderr.each do |line|
+								@message_queue.err(line.strip)
+							end
+						rescue IOError
+						end
+					end
 
-          @out_reader = Thread.new do
-            begin
-              stdout.each do |line|
-                @message_queue.out(line.strip)
-              end
-            rescue IOError
-            ensure
-              @in_writter.kill
-              @err_reader.kill
-              log "Minecraft exits"
-            end
-          end
+					@out_reader = Thread.new do
+						begin
+							stdout.each do |line|
+								@message_queue.out(line.strip)
+							end
+						rescue IOError
+						ensure
+							@in_writter.kill
+							@err_reader.kill
+							log "Minecraft exits"
+						end
+					end
 
-          wait_msg do |m|
-            m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
-          end
+					wait_msg do |m|
+						m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
+					end
 
-          unless running?
-            Process.wait(@server_pid)
-            raise StartupFailedError, @cmd 
-          end
-        rescue Errno::ENOENT
-            raise StartupFailedError, @cmd 
-        end
-      end
+					unless running?
+						Process.wait(@server_pid)
+						raise StartupFailedError, @cmd 
+					end
+				rescue Errno::ENOENT
+					raise StartupFailedError, @cmd 
+				end
+			end
 		end
 	end
 
@@ -201,7 +201,7 @@ class Minecraft
 		else
 			command('stop') do
 				time_operation("Server stop") do
-          Process.wait(@server_pid)
+					Process.wait(@server_pid)
 					log "Server stopped"
 				end
 
@@ -224,9 +224,9 @@ class Minecraft
 		end
 	end
 
-  def method_missing(m, *args)
-    command(([m.to_s.tr('_', '-')] + args).join(' '))
-  end
+	def method_missing(m, *args)
+		command(([m.to_s.tr('_', '-')] + args).join(' '))
+	end
 
 	def command(cmd)
 		raise RuntimeError, "server not running" unless running?
@@ -238,9 +238,9 @@ class Minecraft
 		end
 	end
 
-  def history
-    @message_queue.history
-  end
+	def history
+		@message_queue.history
+	end
 
 	private
 
@@ -256,15 +256,15 @@ class Minecraft
 
 	def wait_msg(discard = false, timeout = 20)
 		Timeout::timeout(timeout) do
-      loop do
-        msg = @message_queue.pop
-        if yield msg
-          collect(msg) unless discard
-          break
-        end
+			loop do
+				msg = @message_queue.pop
+				if yield msg
+					collect(msg) unless discard
+					break
+				end
 
-        collect(msg)
-      end
+				collect(msg)
+			end
 		end
 	end
 

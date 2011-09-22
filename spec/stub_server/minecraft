@@ -13,7 +13,7 @@ end
 $expects = {}
 
 def expect(command, &response)
-  $expects[command] = response
+	$expects[command] = response
 end
 
 out '151 recipes'
@@ -38,56 +38,56 @@ err '2011-09-10 12:59:01 [INFO] Preparing spawn area: 97%'
 err '2011-09-10 12:59:01 [INFO] Done (5887241893ns)! For help, type "help" or "?"'
 
 expect 'list' do
-  err '2011-09-20 14:42:04 [INFO] Connected players: kazuya'
+	err '2011-09-20 14:42:04 [INFO] Connected players: kazuya'
 end
 
 expect 'stop' do
-  err '2011-09-19 22:12:00 [INFO] Stopping server'
-  err '2011-09-19 22:12:00 [INFO] Saving chunks'
-  err '2011-09-19 22:12:00 [INFO] Saving chunks'
-  exit
+	err '2011-09-19 22:12:00 [INFO] Stopping server'
+	err '2011-09-19 22:12:00 [INFO] Saving chunks'
+	err '2011-09-19 22:12:00 [INFO] Saving chunks'
+	exit
 end
 
 expect 'help' do
-  err '2011-09-21 13:33:46 [INFO] To run the server without a gui, start it like this:'
-  err '2011-09-21 13:33:46 [INFO]    java -Xmx1024M -Xms1024M -jar minecraft_server.jar nogui'
-  err '2011-09-21 13:33:46 [INFO] Console commands:'
-  err '2011-09-21 13:33:46 [INFO]    help  or  ?               shows this message'
-  err '2011-09-21 13:33:46 [INFO]    kick <player>             removes a player from the server'
-  err '2011-09-21 13:33:46 [INFO]    ban <player>              bans a player from the server'
-  err '2011-09-21 13:33:46 [INFO]    pardon <player>           pardons a banned player so that they can connect again'
-  err '2011-09-21 13:33:46 [INFO]    ban-ip <ip>               bans an IP address from the server'
-  err '2011-09-21 13:33:46 [INFO]    pardon-ip <ip>            pardons a banned IP address so that they can connect again'
-  err '2011-09-21 13:33:46 [INFO]    op <player>               turns a player into an op'
-  err '2011-09-21 13:33:46 [INFO]    deop <player>             removes op status from a player'
-  err '2011-09-21 13:33:46 [INFO]    tp <player1> <player2>    moves one player to the same location as another player'
-  err '2011-09-21 13:33:46 [INFO]    give <player> <id> [num]  gives a player a resource'
-  err '2011-09-21 13:33:46 [INFO]    tell <player> <message>   sends a private message to a player'
-  err '2011-09-21 13:33:46 [INFO]    stop                      gracefully stops the server'
-  err '2011-09-21 13:33:46 [INFO]    save-all                  forces a server-wide level save'
-  err '2011-09-21 13:33:46 [INFO]    save-off                  disables terrain saving (useful for backup scripts)'
-  err '2011-09-21 13:33:46 [INFO]    save-on                   re-enables terrain saving'
-  err '2011-09-21 13:33:46 [INFO]    list                      lists all currently connected players'
-  err '2011-09-21 13:33:46 [INFO]    say <message>             broadcasts a message to all players'
-  err '2011-09-21 13:33:46 [INFO]    time <add|set> <amount>   adds to or sets the world time (0-24000)'
-  err '2011-09-21 13:33:46 [INFO]    gamemode <player> <mode>  sets player\'s game mode (0 or 1)'
+	err '2011-09-21 13:33:46 [INFO] To run the server without a gui, start it like this:'
+	err '2011-09-21 13:33:46 [INFO]    java -Xmx1024M -Xms1024M -jar minecraft_server.jar nogui'
+	err '2011-09-21 13:33:46 [INFO] Console commands:'
+	err '2011-09-21 13:33:46 [INFO]    help  or  ?               shows this message'
+	err '2011-09-21 13:33:46 [INFO]    kick <player>             removes a player from the server'
+	err '2011-09-21 13:33:46 [INFO]    ban <player>              bans a player from the server'
+	err '2011-09-21 13:33:46 [INFO]    pardon <player>           pardons a banned player so that they can connect again'
+	err '2011-09-21 13:33:46 [INFO]    ban-ip <ip>               bans an IP address from the server'
+	err '2011-09-21 13:33:46 [INFO]    pardon-ip <ip>            pardons a banned IP address so that they can connect again'
+	err '2011-09-21 13:33:46 [INFO]    op <player>               turns a player into an op'
+	err '2011-09-21 13:33:46 [INFO]    deop <player>             removes op status from a player'
+	err '2011-09-21 13:33:46 [INFO]    tp <player1> <player2>    moves one player to the same location as another player'
+	err '2011-09-21 13:33:46 [INFO]    give <player> <id> [num]  gives a player a resource'
+	err '2011-09-21 13:33:46 [INFO]    tell <player> <message>   sends a private message to a player'
+	err '2011-09-21 13:33:46 [INFO]    stop                      gracefully stops the server'
+	err '2011-09-21 13:33:46 [INFO]    save-all                  forces a server-wide level save'
+	err '2011-09-21 13:33:46 [INFO]    save-off                  disables terrain saving (useful for backup scripts)'
+	err '2011-09-21 13:33:46 [INFO]    save-on                   re-enables terrain saving'
+	err '2011-09-21 13:33:46 [INFO]    list                      lists all currently connected players'
+	err '2011-09-21 13:33:46 [INFO]    say <message>             broadcasts a message to all players'
+	err '2011-09-21 13:33:46 [INFO]    time <add|set> <amount>   adds to or sets the world time (0-24000)'
+	err '2011-09-21 13:33:46 [INFO]    gamemode <player> <mode>  sets player\'s game mode (0 or 1)'
 end
 
 expect 'say' do |*args|
-  err "2011-09-21 14:01:18 [INFO] [CONSOLE] #{args.join(' ')}"
+	err "2011-09-21 14:01:18 [INFO] [CONSOLE] #{args.join(' ')}"
 end
 
 expect 'save-all' do
-  err '2011-09-21 14:02:22 [INFO] CONSOLE: Forcing save..'
-  err '2011-09-21 14:02:22 [INFO] CONSOLE: Save complete.'
+	err '2011-09-21 14:02:22 [INFO] CONSOLE: Forcing save..'
+	err '2011-09-21 14:02:22 [INFO] CONSOLE: Save complete.'
 end
 
 loop do
 	cmd, *args = gets.split(' ')
-  if $expects.member? cmd
-    $expects[cmd].call(*args)    
-  else
-    err '2011-09-20 14:42:52 [INFO] Unknown console command. Type "help" for help.'
-  end
+	if $expects.member? cmd
+		$expects[cmd].call(*args)    
+	else
+		err '2011-09-20 14:42:52 [INFO] Unknown console command. Type "help" for help.'
+	end
 end
 
