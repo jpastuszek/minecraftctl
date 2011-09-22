@@ -38,7 +38,7 @@ Main do
 
 			args = params['arguments'].values
 
-			if ['log', 'inspect', 'list', 'help'].include? command
+			if ['status', 'log', 'inspect', 'list', 'help'].include? command
 				puts c.get_content("http://#{params['server'].value}:#{params['port'].value}/#{command}")
 			else
 				puts c.post_content("http://#{params['server'].value}:#{params['port'].value}/#{command}", args.join("\n"))
