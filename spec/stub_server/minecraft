@@ -82,6 +82,13 @@ expect 'save-all' do
 	err '2011-09-21 14:02:22 [INFO] CONSOLE: Save complete.'
 end
 
+expect 'stream' do
+	10.times do |n|
+		err "2011-09-21 14:02:#{n} [INFO] #{n}"
+		sleep 1
+	end
+end
+
 loop do
 	cmd, *args = gets.split(' ')
 	if $expects.member? cmd
