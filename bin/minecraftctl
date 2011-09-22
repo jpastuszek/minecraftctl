@@ -2,6 +2,8 @@
 require 'rubygems'
 require 'main'
 require 'httpclient'
+require 'thread'
+Thread.abort_on_exception = true
 
 Main do
 	description 'controls Minecraft via minecraftctlserver'
@@ -9,11 +11,13 @@ Main do
 	option 'server', 's' do
 		default 'localhost'
 		description 'minecraftctlserver address'
+		argument_required
 	end
 
 	option 'port', 'p' do
 		default 25560
 		description 'minecraftctlserver port'
+		argument_required
 	end
 
 	argument 'command' do
@@ -39,9 +43,13 @@ Main do
 			args = params['arguments'].values
 
 			if ['status', 'log', 'inspect', 'list', 'help'].include? command
-				puts c.get_content("http://#{params['server'].value}:#{params['port'].value}/#{command}")
+				c.get_async("http://#{params['server'].value}:#{params['port'].value}/#{command}").pop.content.each do |line|
+					puts line
+				end
 			else
-				puts c.post_content("http://#{params['server'].value}:#{params['port'].value}/#{command}", args.join("\n"))
+				c.post_async("http://#{params['server'].value}:#{params['port'].value}/#{command}", args.join("\n")).pop.content.each do |line|
+					puts line
+				end
 			end
 		rescue Errno::ECONNREFUSED => e
 			puts "Falied to connect to minecraftctlserver; please run minecraftctlserver: #{e}"
