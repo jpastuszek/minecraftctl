@@ -28,7 +28,7 @@ def stop_stub
 	Timeout.timeout(10) do
 		begin
 			loop do
-				p HTTPClient.new.get_content($url + "status")
+				HTTPClient.new.get_content($url + "status")
 				sleep 0.4
 			end
 		rescue Errno::ECONNREFUSED
