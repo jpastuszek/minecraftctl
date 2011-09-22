@@ -12,6 +12,15 @@ And control it with 'minecraftctl', for help try:
 
     $ minecraftctl serverhelp
 
+== Changelog
+
+=== v1.1.0
+* Output from server is streamed in real time
+* Fixed problem with initial pid file creation
+* Massive refactoring and tests
+* Added 'status' command
+* Better error detection and reporting
+
 == Contributing to minecraftctl
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet
