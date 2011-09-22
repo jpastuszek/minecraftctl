@@ -28,10 +28,12 @@ def stop_stub
 	Timeout.timeout(10) do
 		begin
 			loop do
-				HTTPClient.new.get_content($url + "status")
+				p HTTPClient.new.get_content($url + "status")
 				sleep 0.4
 			end
 		rescue Errno::ECONNREFUSED
+		rescue => e
+			puts "got different error: #{e}"
 		end
 	end
 	sleep 0.2

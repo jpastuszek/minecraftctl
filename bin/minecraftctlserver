@@ -127,6 +127,8 @@ Main do
 		s = Sinatra.new
 		s.set :port, params['port'].value
 		s.set :environment, 'production'
+		s.set :server, ['mongrel']
+		s.set :lock, true
 
 		s.post '/save-all' do
 			TextCollector.for(minecraft) do
