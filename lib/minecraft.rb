@@ -101,7 +101,6 @@ class Minecraft
 		@in_queue = Queue.new
 		@message_queue = MessageQueue.new
 
-		@running = false
     @server_pid = nil
 
 		@collector = nil
@@ -125,7 +124,7 @@ class Minecraft
   end
 
 	def running?
-		@running
+    @out_reader and @in_writter.alive?
 	end
 
   def log(msg)
@@ -137,7 +136,7 @@ class Minecraft
   end
 
 	def start
-		if @running
+		if running?
 			log "Server already running"
 		else
 			time_operation("Server start") do
@@ -175,14 +174,11 @@ class Minecraft
               end
             rescue IOError
             ensure
-              log "Minecraft exits"
-              @running = false
               @in_writter.kill
               @err_reader.kill
+              log "Minecraft exits"
             end
           end
-
-          @running = true
 
           wait_msg do |m|
             m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
@@ -200,7 +196,7 @@ class Minecraft
 	end
 
 	def stop
-		unless @running
+		unless running?
 			log "Server already stopped"
 		else
 			command('stop') do
@@ -233,7 +229,7 @@ class Minecraft
   end
 
 	def command(cmd)
-		raise RuntimeError, "server not running" unless @running
+		raise RuntimeError, "server not running" unless running?
 		@in_queue << "#{cmd}\n"
 		if block_given?
 			yield 
