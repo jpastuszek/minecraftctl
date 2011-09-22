@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "minecraftctl"
-  s.version = "1.0.0"
+  s.version = "1.1.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Jakub Pastuszek"]
-  s.date = "2011-09-10"
+  s.date = "2011-09-22"
   s.description = "Allows to send messages, start and stop Minecraft server"
   s.email = "jpastuszek@gmail.com"
   s.executables = ["minecraftctl", "minecraftctlserver", "minecraftctl", "minecraftctlserver"]
@@ -28,10 +28,15 @@ Gem::Specification.new do |s|
     "VERSION",
     "bin/minecraftctl",
     "bin/minecraftctlserver",
-    "lib/minecraftctl.rb",
+    "lib/message_collector.rb",
+    "lib/minecraft.rb",
+    "lib/spawn.rb",
     "minecraftctl.gemspec",
-    "spec/minecraftctl_spec.rb",
-    "spec/spec_helper.rb"
+    "spec/message_collector_spec.rb",
+    "spec/minecraft_spec.rb",
+    "spec/minecraftctlserver_spec.rb",
+    "spec/spec_helper.rb",
+    "spec/stub_server/minecraft"
   ]
   s.homepage = "http://github.com/jpastuszek/minecraftctl"
   s.licenses = ["MIT"]
@@ -53,6 +58,8 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<main>, [">= 4.7.3"])
       s.add_development_dependency(%q<haml>, [">= 3.1.3"])
       s.add_development_dependency(%q<httpclient>, [">= 2.2.1"])
+      s.add_development_dependency(%q<open4>, [">= 1.1.0"])
+      s.add_development_dependency(%q<mongrel>, [">= 1.1.5"])
     else
       s.add_dependency(%q<rspec>, ["~> 2.3.0"])
       s.add_dependency(%q<bundler>, ["~> 1.0.0"])
@@ -64,6 +71,8 @@ Gem::Specification.new do |s|
       s.add_dependency(%q<main>, [">= 4.7.3"])
       s.add_dependency(%q<haml>, [">= 3.1.3"])
       s.add_dependency(%q<httpclient>, [">= 2.2.1"])
+      s.add_dependency(%q<open4>, [">= 1.1.0"])
+      s.add_dependency(%q<mongrel>, [">= 1.1.5"])
     end
   else
     s.add_dependency(%q<rspec>, ["~> 2.3.0"])
@@ -76,6 +85,8 @@ Gem::Specification.new do |s|
     s.add_dependency(%q<main>, [">= 4.7.3"])
     s.add_dependency(%q<haml>, [">= 3.1.3"])
     s.add_dependency(%q<httpclient>, [">= 2.2.1"])
+    s.add_dependency(%q<open4>, [">= 1.1.0"])
+    s.add_dependency(%q<mongrel>, [">= 1.1.5"])
   end
 end
 
