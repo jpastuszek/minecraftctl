@@ -4,15 +4,52 @@ Allows running Minecraft server in background (daemon) and send commands, stop, 
 
 == Usage
 
-Lounch Minecraft server with:
+Launch Minecraft server with:
 
     $ minecraftctlserver <path to minecraft server install dir>
 
 And control it with 'minecraftctl', for help try:
 
-    $ minecraftctl serverhelp
+    $ minecraftctl /
+
+Executing console commands:
+
+    $ minecraftctl /server console help
+    $ minecraftctl /server console say hello world
+    $ minecraftctl /server console list
+    $ minecraftctl /server console kick kazuya
+
+Stopping and starting minecraft server:s
+
+    $ minecraftctl /server stop
+    $ minecraftctl /server start
+
+Shutting down minecraftctlserver and minecraft server within:
+
+    $ minecraftctl / shutdown
+
+== API
+
+The minecraftctlserver exposes HTTP API on port 25560 (by default) and on localhost (by default).
+GET call will return a value for given URI or available API commands for GET / and /server.
+Use space delimited list of arguments as POST data. First argument will be threated as API command.
+
+Some cURL examples:
+
+    $ curl localhost:25560/ # GET / give list of all API calls
+    $ curl localhost:25560/pid_file # get PID file location
+    $ curl localhost:25560/ -d shutdown # POST / with shutdown POST data will stop the control server
+    $ curl localhost:25560/status # get minecraft server status
+    $ curl localhost:25560/server -d 'stop' # stop minecraft server
+    $ curl localhost:25560/server -d 'start' # stop minecraft server
+    $ curl localhost:25560/server -d 'console list' # list all connected users
 
 == Changelog
+
+=== v2.0.0
+* New cleaner API - more REST like
+* New API commands: pid, pid_file, dir, out...
+* Cleanups and fixes
 
 === v1.1.0
 * Output from server is streamed in real time
