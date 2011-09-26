@@ -5,6 +5,8 @@ require 'open3'
 require 'thread'
 require 'pathname'
 require 'daemon'
+require 'sinatra/base'
+require 'haml'
 
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 
@@ -82,8 +84,10 @@ Main do
 	end
 
 	run do
-		pid_file = Pathname.new(params['minecraft-dir'].value) + params['pid-file'].value
-		log_file = Pathname.new(params['minecraft-dir'].value) + params['log-file'].value
+		pid_file = Pathname.new(params['pid-file'].value)
+		log_file = Pathname.new(params['log-file'].value)
+
+		Dir.chdir(params['minecraft-dir'].value)
 
 		if params['foreground'].given?
 			Daemon.lock(pid_file)
@@ -91,13 +95,7 @@ Main do
 			Daemon.daemonize(pid_file, log_file)
 		end
 
-		require 'sinatra/base'
-		require 'haml'
-
-		Dir.chdir(params['minecraft-dir'].value)
-
 		minecraft = Minecraft.new(params['command'].value)
-
 		minecraft.start
 
 		s = Sinatra.new
