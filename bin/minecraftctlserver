@@ -84,6 +84,12 @@ Main do
 		argument_required
 	end
 
+	option 'bind', 'b' do
+		description 'IP address of interface to listen for connections on; use 0.0.0.0 to bind to all interfaces'
+		default '127.0.0.1'
+		argument_required
+	end
+
 	option 'foreground', 'f' do
 		description 'don\'t daemonize'
 	end
@@ -126,6 +132,7 @@ Main do
 
 		s = Sinatra.new
 		s.set :port, params['port'].value
+		s.set :bind, params['bind'].value
 		s.set :environment, 'production'
 		s.set :server, ['mongrel']
 		s.set :lock, true
