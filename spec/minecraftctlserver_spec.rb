@@ -22,7 +22,7 @@ def start_stub(wait = true)
 end
 
 def stop_stub
-	HTTPClient.new.post_content($url + 'shutdown', '')
+	HTTPClient.new.post_content($url, 'shutdown')
 
 	Timeout.timeout(10) do
 		begin
@@ -70,16 +70,16 @@ describe 'minecraftctlserver' do
 			end
 
 			it 'should respond to console list command' do
-				HTTPClient.new.post_content($url + "server/console", 'list').should == "Connected players: kazuya\n"
+				HTTPClient.new.post_content($url + 'server', 'console list').should == "Connected players: kazuya\n"
 			end
 
 			it 'should stop and start with POST /server start and POST /server stop' do
-				HTTPClient.new.post_content($url + "server/stop", '').should include "Server stopped\n"
-				HTTPClient.new.post_content($url + "server/start", '').should include 'Done (5887241893ns)! For help, type "help" or "?"'
+				HTTPClient.new.post_content($url + 'server', 'stop').should include "Server stopped\n"
+				HTTPClient.new.post_content($url + 'server', 'start').should include "Done (5887241893ns)! For help, type \"help\" or \"?\"\n"
 			end
 
-			it 'should respond to GET /' do
-				HTTPClient.new.get_content($url).should include "show log output generated"
+			it 'should respond to GET / with API command list' do
+				HTTPClient.new.get_content($url).should include 'minecraft control server API'
 			end
 
 			after :all do
