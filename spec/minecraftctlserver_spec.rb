@@ -12,7 +12,7 @@ def start_stub(wait = true)
 		c = HTTPClient.new
 		Timeout.timeout(10) do
 			begin
-				c.get_content($url + "status")
+				c.get_content($url + "server/status")
 			rescue Errno::ECONNREFUSED
 				sleep 0.4
 				retry
@@ -22,12 +22,12 @@ def start_stub(wait = true)
 end
 
 def stop_stub
-	HTTPClient.new.post_content($url, 'shutdown')
+	HTTPClient.new.post_content($url + 'shutdown', '')
 
 	Timeout.timeout(10) do
 		begin
 			loop do
-				HTTPClient.new.get_content($url + "status")
+				HTTPClient.new.get_content($url + "server/status")
 				sleep 0.4
 			end
 		rescue Errno::ECONNREFUSED
@@ -49,13 +49,13 @@ describe 'minecraftctlserver' do
 				Timeout.timeout(10) do
 					out = nil
 					begin
-						out = HTTPClient.new.get_content($url + "status")
+						out = HTTPClient.new.get_content($url + "server/status")
 					rescue Errno::ECONNREFUSED
 						sleep 0.4
 						retry
 					end
 
-					out.should =~ /Minecraft server is running with pid:/
+					out.should =~ /running/
 				end
 			end
 
@@ -69,17 +69,17 @@ describe 'minecraftctlserver' do
 				start_stub
 			end
 
-			it 'should respond to GET /list' do
-				HTTPClient.new.get_content($url + "list").should == "Connected players: kazuya\n"
+			it 'should respond to console list command' do
+				HTTPClient.new.post_content($url + "server/console", 'list').should == "Connected players: kazuya\n"
 			end
 
 			it 'should stop and start with POST /server start and POST /server stop' do
-				HTTPClient.new.post_content($url + "server", 'stop').should include "Server stopped\n"
-				HTTPClient.new.post_content($url + "server", 'start').should include 'Done (5887241893ns)! For help, type "help" or "?"'
+				HTTPClient.new.post_content($url + "server/stop", '').should include "Server stopped\n"
+				HTTPClient.new.post_content($url + "server/start", '').should include 'Done (5887241893ns)! For help, type "help" or "?"'
 			end
 
-			it 'should respond to GET /help' do
-				HTTPClient.new.get_content($url + "help").should include "show server status\n"
+			it 'should respond to GET /' do
+				HTTPClient.new.get_content($url).should include "show log output generated"
 			end
 
 			after :all do
