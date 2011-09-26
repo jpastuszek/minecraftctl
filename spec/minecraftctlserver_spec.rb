@@ -1,13 +1,12 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'httpclient'
-require 'open4'
 require 'timeout'
 
 
 $url = 'http://localhost:25560/'
 
 def start_stub(wait = true)
-	pid, stdin, stdout, stderr = Open4::popen4(File.dirname(__FILE__) + '/../bin/minecraftctlserver -c ./minecraft ' + File.dirname(__FILE__) + '/stub_server')
+	pid, stdin, stdout, stderr = Spawn::spawn(File.dirname(__FILE__) + '/../bin/minecraftctlserver -c ./minecraft ' + File.dirname(__FILE__) + '/stub_server')
 
 	if wait
 		c = HTTPClient.new
