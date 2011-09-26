@@ -86,8 +86,12 @@ describe 'minecraftctlserver' do
 			post('/server', 'console list').should == "Connected players: kazuya\n"
 		end
 
-		it 'POST /server/console with errorlog' do
+		it 'POST /server/console with error' do
 			post('/server', 'console').should == "Console command not specified; try 'console help'\n"
+		end
+
+		it 'POST / blah with error' do
+			post('/', 'blah').should == "Unknown POST argument: blah for path: /\n"
 		end
 
 		describe '(having minecraft server stopped)' do

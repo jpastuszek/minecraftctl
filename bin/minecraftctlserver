@@ -65,7 +65,7 @@ class APIBuilder
 
 		@sinatra.post(root_path) do
 			cmd, *args = request.body.read.split(' ')
-			op = post_map[cmd] or return "unknown command: #{cmd}\n"
+			op = post_map[cmd] or return "Unknown POST argument: #{cmd} for path: #{request.path_info}\n"
 			op.block.call(args)
 		end
 	end
