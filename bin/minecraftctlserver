@@ -65,7 +65,7 @@ class APIBuilder
 
 		@sinatra.post(root_path) do
 			cmd, *args = request.body.read.split(' ')
-			op = post_map[cmd] or return "Unknown argument: #{cmd} for request: #{request.path_info}\n"
+			op = post_map[cmd] or return [400, "Unknown argument: #{cmd} for request: #{request.path_info}\n"]
 			op.block.call(args)
 		end
 	end
@@ -266,7 +266,7 @@ Main do
 		end
 
 		sinatra.not_found do
-			"Request '#{env['REQUEST_PATH']}' not supported, please see '/serverhelp' for details\n"
+			"Unknown request: #{env['REQUEST_PATH']}\n"
 		end
 
 		sinatra.error do

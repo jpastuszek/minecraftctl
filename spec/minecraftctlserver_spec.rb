@@ -9,8 +9,18 @@ def get(uri)
 	HTTPClient.new.get_content($url + uri)
 end
 
+def get_with_status(uri)
+	res = HTTPClient.new.get($url + uri)
+	return res.status, res.body
+end
+
 def post(uri, data)
 	HTTPClient.new.post_content($url + uri, data)
+end
+
+def post_with_status(uri, data)
+	res = HTTPClient.new.post($url + uri, data)
+	return res.status, res.body
 end
 
 def start_stub
@@ -91,7 +101,15 @@ describe 'minecraftctlserver' do
 		end
 
 		it 'POST / blah with error' do
-			post('/', 'blah').should == "Unknown argument: blah for request: /\n"
+			status, body = post_with_status('/', 'blah')
+			status.should == 400
+			body.should == "Unknown argument: blah for request: /\n"
+		end
+
+		it 'GET /blah with error' do
+			status, body = get_with_status('/blah')
+			status.should == 404
+			body.should == "Unknown request: /blah\n"
 		end
 
 		describe '(having minecraft server stopped)' do
