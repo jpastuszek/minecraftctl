@@ -45,8 +45,12 @@ describe 'minecraftctlserver' do
 			get('/').should include 'minecraft control server API'
 		end
 
-		it 'GET /pid_file with absolute pid file path' do
+		it 'GET /pid_file with absolute PID file path' do
 			get('/pid_file').should match(%r{/.*spec/stub_server/minecraftctlserver.pid\n$})
+		end
+
+		it 'GET /log_file with absolute log file path' do
+			get('/log_file').should match(%r{/.*spec/stub_server/minecraftctlserver.log\n$})
 		end
 
 		it 'GET /pid with PID number of control server process' do
