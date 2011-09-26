@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'httpclient'
 require 'timeout'
-
+require 'spawn'
 
 $url = 'http://localhost:25560/'
 
@@ -22,7 +22,7 @@ def start_stub(wait = true)
 end
 
 def stop_stub
-	HTTPClient.new.post_content($url + "shutdown", '')
+	HTTPClient.new.post_content($url, 'shutdown')
 
 	Timeout.timeout(10) do
 		begin
@@ -73,9 +73,9 @@ describe 'minecraftctlserver' do
 				HTTPClient.new.get_content($url + "list").should == "Connected players: kazuya\n"
 			end
 
-			it 'should stop and start with POST /stop and POST /start' do
-				HTTPClient.new.post_content($url + "stop", '').should include "Server stopped\n"
-				HTTPClient.new.post_content($url + "start", '').should include 'Done (5887241893ns)! For help, type "help" or "?"'
+			it 'should stop and start with POST /server start and POST /server stop' do
+				HTTPClient.new.post_content($url + "server", 'stop').should include "Server stopped\n"
+				HTTPClient.new.post_content($url + "server", 'start').should include 'Done (5887241893ns)! For help, type "help" or "?"'
 			end
 
 			it 'should respond to GET /help' do
