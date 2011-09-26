@@ -6,22 +6,22 @@ require 'thread'
 Thread.abort_on_exception = true
 
 Main do
-	description 'controls Minecraft via minecraftctlserver'
+	description 'controls minecraft server via minecraftctlserver'
 
 	option 'server', 's' do
 		default 'localhost'
-		description 'minecraftctlserver address'
+		description 'minecraft control server address'
 		argument_required
 	end
 
 	option 'port', 'p' do
 		default 25560
-		description 'minecraftctlserver port'
+		description 'minecraft control server port'
 		argument_required
 	end
 
 	argument 'command' do
-		description 'command to send to Minecraft server: try "serverhelp"'
+		description 'command to send to control server: try "/" for available commands'
 	end
 
 	argument 'arguments' do
@@ -42,17 +42,17 @@ Main do
 
 			args = params['arguments'].values
 
-			if ['status', 'log', 'inspect', 'list', 'help'].include? command
-				c.get_async("http://#{params['server'].value}:#{params['port'].value}/#{command}").pop.content.each do |line|
+			if args.empty?
+				c.get_async("http://#{params['server'].value}:#{params['port'].value}#{command}").pop.content.each do |line|
 					puts line
 				end
 			else
-				c.post_async("http://#{params['server'].value}:#{params['port'].value}/#{command}", args.join("\n")).pop.content.each do |line|
+				c.post_async("http://#{params['server'].value}:#{params['port'].value}#{command}", args.join("\n")).pop.content.each do |line|
 					puts line
 				end
 			end
 		rescue Errno::ECONNREFUSED => e
-			puts "Falied to connect to minecraftctlserver; please run minecraftctlserver: #{e}"
+			puts "Falied to connect to minecraftctlserver; please run minecraftctlserver first: #{e}"
 		end
 	end
 end
