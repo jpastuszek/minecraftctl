@@ -253,6 +253,7 @@ Main do
 				end
 
 				post 'console', 'send console command' do |args|
+					next "Console command not specified; try 'console help'\n" if args.empty?
 					TextCollector.for(minecraft) do
 						begin
 							send(args.shift.tr('-', '_').to_sym, *args)

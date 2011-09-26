@@ -86,6 +86,10 @@ describe 'minecraftctlserver' do
 			post('/server', 'console list').should == "Connected players: kazuya\n"
 		end
 
+		it 'POST /server/console with errorlog' do
+			post('/server', 'console').should == "Console command not specified; try 'console help'\n"
+		end
+
 		describe '(having minecraft server stopped)' do
 			before :all do
 				post('/server', 'stop')
