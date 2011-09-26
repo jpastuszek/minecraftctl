@@ -218,7 +218,7 @@ class Minecraft
 					log "Server stopped"
 				end
 
-				wait_msg{|m| m.msg == "Server stopped"}
+				wait_msg{|m| m.msg == "Minecraft exits"}
 			end
 		end
 	end
