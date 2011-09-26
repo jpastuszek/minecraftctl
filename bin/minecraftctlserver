@@ -65,7 +65,7 @@ class APIBuilder
 
 		@sinatra.post(root_path) do
 			cmd, *args = request.body.read.split(' ')
-			op = post_map[cmd] or return "Unknown POST argument: #{cmd} for path: #{request.path_info}\n"
+			op = post_map[cmd] or return "Unknown argument: #{cmd} for request: #{request.path_info}\n"
 			op.block.call(args)
 		end
 	end
@@ -76,14 +76,14 @@ class APIBuilder
 
 	def help
 		out = []
-		out << "GET #{root_path} - #{@description}"
+		out << "#{root_path} - #{@description}"
 
 		@dsl.posts.each do |op|
-			out << "POST #{root_path} #{op.name} - #{op.description}"
+			out << "#{root_path} #{op.name} - #{op.description}"
 		end
 
 		@dsl.gets.each do |op|
-			out << "GET #{@path}/#{op.name} - #{op.description}"
+			out << "#{@path}/#{op.name} - #{op.description}"
 		end
 
 		@dsl.paths.each do |path|

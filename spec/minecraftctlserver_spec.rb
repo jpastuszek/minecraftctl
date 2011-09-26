@@ -91,7 +91,7 @@ describe 'minecraftctlserver' do
 		end
 
 		it 'POST / blah with error' do
-			post('/', 'blah').should == "Unknown POST argument: blah for path: /\n"
+			post('/', 'blah').should == "Unknown argument: blah for request: /\n"
 		end
 
 		describe '(having minecraft server stopped)' do
