@@ -229,7 +229,11 @@ Main do
 				end
 
 				get 'pid', 'minecraft server PID' do
-					minecraft.server_pid.to_s + "\n"
+					if minecraft.server_pid
+						minecraft.server_pid.to_s + "\n"
+					else
+						"Server not running\n"
+					end
 				end
 
 				post 'start', 'starts minecraft server' do
@@ -246,7 +250,11 @@ Main do
 
 				post 'console', 'send console command' do |args|
 					TextCollector.for(minecraft) do
-						send(args.shift.tr('-', '_').to_sym, *args)
+						begin
+							send(args.shift.tr('-', '_').to_sym, *args)
+						rescue Minecraft::ServerNotRunningError
+							log "Server not running"
+						end
 					end
 				end
 			end

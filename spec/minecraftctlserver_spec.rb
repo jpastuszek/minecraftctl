@@ -46,20 +46,66 @@ describe 'minecraftctlserver' do
 		end
 
 		it 'GET /pid_file with absolute pid file path' do
-			get('/pid_file').should match(%r{/.*spec/stub_server/minecraftctlserver.pid})
+			get('/pid_file').should match(%r{/.*spec/stub_server/minecraftctlserver.pid\n$})
 		end
 
 		it 'GET /pid with PID number of control server process' do
 			get('/pid').to_i.should > 0
 		end
 
-		it 'POST /server/console list command' do
-			post('/server', 'console list').should == "Connected players: kazuya\n"
+		it 'GET /dir with absolute directory path where minecraft server is running from' do
+			get('/dir').should match(%r{/.*spec/stub_server\n$})
+		end
+
+		it 'GET /out with content of minecraft server output' do
+			get('/out').should include "Loading properties\n"
 		end
 
 		it 'stop and start with POST /server stop and POST /server start' do
 			post('/server', 'stop').should include "Server stopped\n"
 			post('/server', 'start').should include "Done (5887241893ns)! For help, type \"help\" or \"?\"\n"
+		end
+
+		it 'POST /server start with server aleady running' do
+			post('/server', 'start').should include "Server already running\n"
+		end
+
+		it 'GET /server/status with running' do
+			get('/server/status').should == "running\n"
+		end
+
+		it 'GET /server/pid with PID number of minecraft server process' do
+			get('/server/pid').to_i.should > 0
+		end
+		
+		it 'POST /server/console list with list of connected players' do
+			post('/server', 'console list').should == "Connected players: kazuya\n"
+		end
+
+		describe '(having minecraft server stopped)' do
+			before :all do
+				post('/server', 'stop')
+			end
+
+			it 'POST /server stop with server aleady stopped' do
+				post('/server', 'stop').should include "Server already stopped\n"
+			end
+
+			it 'GET /server/status with stopped' do
+				get('/server/status').should == "stopped\n"
+			end
+
+			it 'GET /server/pid with error' do
+				get('/server/pid').should == "Server not running\n"
+			end
+
+			it 'POST /server/console list with error' do
+				post('/server', 'console list').should == "Server not running\n"
+			end
+
+			after :all do
+				post('/server', 'start')
+			end
 		end
 
 		after :all do

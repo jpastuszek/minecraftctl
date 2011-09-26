@@ -96,6 +96,12 @@ class Minecraft
 		end
 	end
 
+	class ServerNotRunningError < RuntimeError
+		def initialize
+			super 'server not running'
+		end
+	end
+
 	def initialize(cmd)
 		@cmd = cmd
 		@in_queue = Queue.new
@@ -191,6 +197,7 @@ class Minecraft
 
 					unless running?
 						Process.wait(@server_pid)
+						@server_pid = nil
 						raise StartupFailedError, @cmd 
 					end
 				rescue Errno::ENOENT
@@ -207,6 +214,7 @@ class Minecraft
 			command('stop') do
 				time_operation("Server stop") do
 					Process.wait(@server_pid)
+					@server_pid = nil
 					log "Server stopped"
 				end
 
@@ -234,7 +242,7 @@ class Minecraft
 	end
 
 	def command(cmd)
-		raise RuntimeError, "server not running" unless running?
+		raise ServerNotRunningError unless running?
 		@in_queue << "#{cmd}\n"
 		if block_given?
 			yield 
