@@ -3,15 +3,22 @@ require 'httpclient'
 require 'timeout'
 require 'spawn'
 
-$url = 'http://localhost:25560/'
+$url = 'http://localhost:25560'
+
+def get(uri)
+	HTTPClient.new.get_content($url + uri)
+end
+
+def post(uri, data)
+	HTTPClient.new.post_content($url + uri, data)
+end
 
 def start_stub
 	pid, stdin, stdout, stderr = Spawn::spawn(File.dirname(__FILE__) + '/../bin/minecraftctlserver -c ./minecraft ' + File.dirname(__FILE__) + '/stub_server')
 
-	c = HTTPClient.new
 	Timeout.timeout(10) do
 		begin
-			@pid_file = c.get_content($url + "pid_file").strip
+			@pid_file = get('/pid_file').strip
 		rescue Errno::ECONNREFUSED
 			sleep 0.1
 			retry
@@ -20,7 +27,7 @@ def start_stub
 end
 
 def stop_stub
-	HTTPClient.new.post_content($url, 'shutdown')
+	post('/', 'shutdown')
 
 	# wait pid lock release
 	File.open(@pid_file) do |pf|
@@ -34,25 +41,25 @@ describe 'minecraftctlserver' do
 			start_stub
 		end
 
-		it 'GET /pid_file with absolute pid file path' do
-			HTTPClient.new.get_content($url + 'pid_file').should match(%r{/.*spec/stub_server/minecraftctlserver.pid})
+		it 'GET / with API command list' do
+			get('/').should include 'minecraft control server API'
 		end
 
-		it 'GET / with API command list' do
-			HTTPClient.new.get_content($url).should include 'minecraft control server API'
+		it 'GET /pid_file with absolute pid file path' do
+			get('/pid_file').should match(%r{/.*spec/stub_server/minecraftctlserver.pid})
 		end
 
 		it 'GET /pid with PID number of control server process' do
-			HTTPClient.new.get_content($url + 'pid').to_i.should > 0
+			get('/pid').to_i.should > 0
 		end
 
 		it 'POST /server/console list command' do
-			HTTPClient.new.post_content($url + 'server', 'console list').should == "Connected players: kazuya\n"
+			post('/server', 'console list').should == "Connected players: kazuya\n"
 		end
 
 		it 'stop and start with POST /server stop and POST /server start' do
-			HTTPClient.new.post_content($url + 'server', 'stop').should include "Server stopped\n"
-			HTTPClient.new.post_content($url + 'server', 'start').should include "Done (5887241893ns)! For help, type \"help\" or \"?\"\n"
+			post('/server', 'stop').should include "Server stopped\n"
+			post('/server', 'start').should include "Done (5887241893ns)! For help, type \"help\" or \"?\"\n"
 		end
 
 		after :all do
