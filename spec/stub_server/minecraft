@@ -1,13 +1,17 @@
 #!/usr/bin/ruby
 
+$delay = ARGV[0]
+
 def out(line)
 	STDOUT << line + "\n"
 	STDOUT.flush
+	sleep $delay.to_f if $delay
 end
 
 def err(line)
 	STDERR << line + "\n"
 	STDERR.flush
+	sleep $delay.to_f if $delay
 end
 
 $expects = {}
@@ -90,7 +94,7 @@ expect 'stream' do
 end
 
 loop do
-	cmd, *args = gets.split(' ')
+	cmd, *args = STDIN.gets.split(' ')
 	if $expects.member? cmd
 		$expects[cmd].call(*args)    
 	else
