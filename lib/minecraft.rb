@@ -102,7 +102,7 @@ class Minecraft
 		end
 	end
 
-	def initialize(cmd, options)
+	def initialize(cmd, options = {})
 		@cmd = cmd
 		@in_queue = Queue.new
 		@message_queue = MessageQueue.new
