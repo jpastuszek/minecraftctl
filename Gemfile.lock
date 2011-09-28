@@ -1,14 +1,11 @@
 GEM
   remote: http://rubygems.org/
   specs:
-    arrayfields (4.7.4)
     cgi_multipart_eof_fix (2.5.0)
-    chronic (0.6.4)
     daemon (1.1.0)
     daemons (1.1.4)
     diff-lcs (1.1.3)
     fastthread (1.0.7)
-    fattr (2.2.0)
     gem_plugin (0.2.3)
     git (1.2.5)
     httpclient (2.2.1)
@@ -16,12 +13,6 @@ GEM
       bundler (~> 1.0)
       git (>= 1.2.5)
       rake
-    main (4.7.7)
-      arrayfields (~> 4.7.4)
-      chronic (~> 0.6.2)
-      fattr (~> 2.2.0)
-      map (~> 4.3.0)
-    map (4.3.0)
     micro-optparse (1.1.5)
     mongrel (1.1.5)
       cgi_multipart_eof_fix (>= 2.4)
@@ -64,7 +55,6 @@ DEPENDENCIES
   daemon (~> 1)
   httpclient (>= 2.2.1)
   jeweler (~> 1.6.4)
-  main (>= 4.7.3)
   micro-optparse (~> 1)
   mongrel (>= 1.1.5)
   rcov
