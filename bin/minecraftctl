@@ -1,54 +1,50 @@
 #!/usr/bin/ruby
 require 'rubygems'
-require 'main'
+require 'micro-optparse'
 require 'httpclient'
 require 'thread'
 Thread.abort_on_exception = true
 
-Main do
-	description 'controls minecraft server via minecraftctlserver'
+options = Parser.new do |p|
+	p.banner = <<EOF
+Controls minecraft server started via minecraftctlserver
 
-	option 'server', 's' do
-		default 'localhost'
-		description 'minecraft control server address'
-		argument_required
-	end
+Usage: #{$0} [options] command [arguments]
 
-	option 'port', 'p' do
-		default 25560
-		description 'minecraft control server port'
-		argument_required
-	end
+Command has to start with '/'
+For available server commands type '#{$0} /'
 
-	argument 'command' do
-		description 'command to send to control server: try "/" for available commands'
-		validate{|cmd| cmd =~ /^\//}
-	end
+Options:
+EOF
+	p.option :server, 'minecraft control server address', :default => 'localhost'
+	p.option :port, 'minecraft control server port', :default => 25560
+end.process!
 
-	argument 'arguments' do
-		required false
-		arity -1
-	end
+command = ARGV.shift
+unless command
+	puts "command not specified, see '#{$0} -h' for help"
+	exit 1
+end
+unless command =~ /^\//
+	puts "invalid command '#{command}', command has to start with '/'. Type '#{$0} /' to see available server commands"
+	exit 1 
+end
 
-	run do
-		c = HTTPClient.new
+args = ARGV
 
-		begin
-			command = params['command'].value
-			args = params['arguments'].values
+c = HTTPClient.new
 
-			if args.empty?
-				c.get_async("http://#{params['server'].value}:#{params['port'].value}#{command}").pop.content.each do |line|
-					puts line
-				end
-			else
-				c.post_async("http://#{params['server'].value}:#{params['port'].value}#{command}", args.join("\n")).pop.content.each do |line|
-					puts line
-				end
-			end
-		rescue Errno::ECONNREFUSED => e
-			puts "Falied to connect to minecraftctlserver; please run minecraftctlserver first: #{e}"
+begin
+	if args.empty?
+		c.get_async("http://#{options[:server]}:#{options[:port]}#{command}").pop.content.each do |line|
+			puts line
+		end
+	else
+		c.post_async("http://#{options[:server]}:#{options[:port]}#{command}", args.join("\n")).pop.content.each do |line|
+			puts line
 		end
 	end
+rescue Errno::ECONNREFUSED => e
+	puts "Falied to connect to minecraftctlserver; please run minecraftctlserver first: #{e}"
 end
 

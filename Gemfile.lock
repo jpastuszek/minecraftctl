@@ -22,6 +22,7 @@ GEM
       fattr (~> 2.2.0)
       map (~> 4.3.0)
     map (4.3.0)
+    micro-optparse (1.1.5)
     mongrel (1.1.5)
       cgi_multipart_eof_fix (>= 2.4)
       daemons (>= 1.0.3)
@@ -64,6 +65,7 @@ DEPENDENCIES
   httpclient (>= 2.2.1)
   jeweler (~> 1.6.4)
   main (>= 4.7.3)
+  micro-optparse (~> 1)
   mongrel (>= 1.1.5)
   rcov
   reek (~> 1.2.8)
