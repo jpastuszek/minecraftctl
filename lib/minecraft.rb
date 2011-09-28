@@ -102,10 +102,13 @@ class Minecraft
 		end
 	end
 
-	def initialize(cmd)
+	def initialize(cmd, options)
 		@cmd = cmd
 		@in_queue = Queue.new
 		@message_queue = MessageQueue.new
+
+		@startup_timeout = (options[:startup_timeout] or 120)
+		@command_timeout = (options[:command_timeout] or 40)
 
 		@server_pid = nil
 
@@ -191,7 +194,7 @@ class Minecraft
 						end
 					end
 
-					wait_msg(false, 120) do |m|
+					wait_msg(false, @startup_timeout) do |m|
 						m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
 					end
 
@@ -266,7 +269,8 @@ class Minecraft
 		log "#{name} finished in #{(Time.now - start).to_f}"
 	end
 
-	def wait_msg(discard = false, timeout = 40)
+	def wait_msg(discard = false, timeout = nil)
+		timeout ||= @command_timeout
 		Timeout::timeout(timeout) do
 			loop do
 				msg = @message_queue.pop

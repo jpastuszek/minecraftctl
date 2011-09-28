@@ -161,6 +161,20 @@ Main do
 		argument_required
 	end
 
+	option 'startup-timeout', 's' do
+		description 'time in seconds after which control server will exit with error while waiting for minecraft to start up'
+		default 120
+		cast :float
+		argument_required
+	end
+
+	option 'command-timeout', 't' do
+		description 'time in seconds after which control server will exit with error while waiting for minecraft console command to finish'
+		default 40
+		cast :float
+		argument_required
+	end
+
 	argument 'minecraft-dir' do
 		description 'directory path to mincraft server installation directory'
 		argument_required
@@ -178,7 +192,7 @@ Main do
 			Daemon.daemonize(pid_file, log_file)
 		end
 
-		minecraft = Minecraft.new(params['command'].value)
+		minecraft = Minecraft.new(params['command'].value, :startup_timeout => params['startup-timeout'].value, :command_timeout => params['command-timeout'].value)
 		TextCollector.for(minecraft) do
 			start
 		end.each do |msg|
