@@ -179,7 +179,11 @@ Main do
 		end
 
 		minecraft = Minecraft.new(params['command'].value)
-		minecraft.start
+		TextCollector.for(minecraft) do
+			start
+		end.each do |msg|
+			puts msg
+		end
 
 		sinatra = Sinatra.new
 		sinatra.set :port, params['port'].value
