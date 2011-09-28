@@ -46,6 +46,13 @@ Some cURL examples:
 
 == Changelog
 
+=== v2.0.1
+* increased startup and command timeout
+* startup and command timeout values are now configurable via -t and -s switches
+* minecraftctl will not rise exception when command does not start with /
+* initial minecraft server startup will now be logged
+* shutdown messages logged in real time
+
 === v2.0.0
 * New cleaner API - more REST like
 * New API commands: pid, pid_file, dir, out...
