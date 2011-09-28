@@ -191,7 +191,7 @@ class Minecraft
 						end
 					end
 
-					wait_msg do |m|
+					wait_msg(false, 120) do |m|
 						m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
 					end
 
@@ -267,7 +267,7 @@ class Minecraft
 		log "#{name} finished in #{(Time.now - start).to_f}"
 	end
 
-	def wait_msg(discard = false, timeout = 20)
+	def wait_msg(discard = false, timeout = 40)
 		Timeout::timeout(timeout) do
 			loop do
 				msg = @message_queue.pop
