@@ -22,6 +22,7 @@ Main do
 
 	argument 'command' do
 		description 'command to send to control server: try "/" for available commands'
+		validate{|cmd| cmd =~ /^\//}
 	end
 
 	argument 'arguments' do
@@ -33,13 +34,7 @@ Main do
 		c = HTTPClient.new
 
 		begin
-			command = case params['command'].value
-				when 'serverhelp'
-					'help'
-				else
-					params['command'].value
-			end
-
+			command = params['command'].value
 			args = params['arguments'].values
 
 			if args.empty?
