@@ -44,7 +44,7 @@ begin
 			puts line
 		end
 	end
-rescue Errno::ECONNREFUSED => e
-	puts "Falied to connect to minecraftctlserver; please run minecraftctlserver first: #{e}"
+rescue SocketError, Errno::ECONNREFUSED => e
+	puts "Falied to connect to minecraft control server (to start it run 'minecraftctlserver .' in your minecraft install directory): #{e}"
 end
 
