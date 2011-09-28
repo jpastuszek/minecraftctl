@@ -46,6 +46,9 @@ Some cURL examples:
 
 == Changelog
 
+=== v2.0.2
+* better help message and switch related error handling
+
 === v2.0.1
 * increased startup and command timeout
 * startup and command timeout values are now configurable via -t and -s switches
