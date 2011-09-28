@@ -213,12 +213,11 @@ class Minecraft
 		else
 			command('stop') do
 				time_operation("Server stop") do
+					wait_msg{|m| m.msg == "Minecraft exits"}
 					Process.wait(@server_pid)
 					@server_pid = nil
 					log "Server stopped"
 				end
-
-				wait_msg{|m| m.msg == "Minecraft exits"}
 			end
 		end
 	end
