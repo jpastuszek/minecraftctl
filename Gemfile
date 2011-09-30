@@ -1,7 +1,11 @@
 source "http://rubygems.org"
-# Add dependencies required to use your gem here.
-# Example:
-#   gem "activesupport", ">= 2.3.5"
+
+gem "sinatra", ">= 1.2.6"
+gem "micro-optparse", "~> 1"
+gem "httpclient", ">= 2.2.1"
+gem "mongrel", ">= 1.1.5"
+gem "mongrel", ">= 1.1.5"
+gem "daemon", "~> 1"
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
@@ -12,11 +16,5 @@ group :development do
 	gem "rcov", ">= 0"
 	gem "reek", "~> 1.2.8"
 	gem "roodi", "~> 2.1.0"
-	gem "sinatra", ">= 1.2.6"
-	gem "micro-optparse", "~> 1"
-	gem "httpclient", ">= 2.2.1"
-	gem "mongrel", ">= 1.1.5"
-	gem "mongrel", ">= 1.1.5"
-	gem "daemon", "~> 1"
 end
 
