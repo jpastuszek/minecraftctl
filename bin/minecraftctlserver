@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 require 'rubygems'
-require 'micro-optparse'
+require 'cli'
 require 'open3'
 require 'thread'
 require 'pathname'
@@ -124,39 +124,29 @@ class APIBuilder
 	end
 end
 
-options = Parser.new do |p|
-	p.banner = <<EOF
-Lounches minecraft server that can be controlled via HTTP
-
-Usage: #{$0} [options] directory
-
-Directory has to be a path to the minecraft server install directory (where you have 'minecraft_server.jar'); use '.' for current directory
-
-Options:
-EOF
-	p.option :command, 'command to be used to span server', :default => 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
-	p.option :port, 'TCP port number on which the HTTP control server will be listening', :default => 25560
-	p.option :bind, 'IP address of interface on which the HTTP control server will be listening on; use 0.0.0.0 to bind to all interfaces', :default => '127.0.0.1'
-	p.option :foreground, 'don\'t daemonize, stay in foreground'
-	p.option :pid_file, 'pid file relative to minecraft server direcotry', :default => 'minecraftctlserver.pid', :short => 'P'
-	p.option :log_file, 'log file relative to minecraft server directory where daemon messages will be written', :default => 'minecraftctlserver.log'
-	p.option :startup_timeout, 'time in seconds after which the control server will exit with error while waiting for minecraft to start up', :default => 120
-	p.option :command_timeout, 'time in seconds after which control server will exit with error while waiting for minecraft console command to finish', :default => 40
-end.process!
-
-directory = ARGV.shift
-unless directory
-	puts "directory not specified, see '#{$0} -h' for help"
-	exit 1
+options = CLI.new do
+	description "Lounches minecraft server that can be controlled via HTTP"
+	option :command,			:short => :c, :description => 'command to be used to span server', :default => 'java -Xms256M -Xmx512M -Djava.net.preferIPv4Stack=true -jar minecraft_server.jar nogui'
+	option :port,				:short => :p, :description => 'TCP port number on which the HTTP control server will be listening', :cast => Integer, :default => 25560
+	option :bind,				:short => :b, :description => 'IP address of interface on which the HTTP control server will be listening on; use 0.0.0.0 to bind to all interfaces', :default => '127.0.0.1'
+	option :server,				:short => :s, :description => 'HTTP server to use', :default => 'mongrel'
+	option :foreground,			:short => :f, :description => 'don\'t daemonize, stay in foreground'
+	option :pid_file,			:short => :P, :description => 'pid file relative to minecraft server direcotry', :default => 'minecraftctlserver.pid'
+	option :log_file,			:short => :l, :description => 'log file relative to minecraft server directory where daemon messages will be written', :default => 'minecraftctlserver.log'
+	option :startup_timeout,	:short => :S, :description => 'time in seconds after which the control server will exit with error while waiting for minecraft to start up', :cast => Integer, :default => 120
+	option :command_timeout,	:short => :T, :description => 'time in seconds after which control server will exit with error while waiting for minecraft console command to finish', :cast => Integer, :default => 41
+	argument :directory,		:description => "Directory has to be a path to the minecraft server install directory (where you have 'minecraft_server.jar'); use '.' for current directory", :cast => Pathname, :default => '.'
+end.parse! do |options|
+	fail "#{options.directory} not a directory" unless options.directory.directory?
 end
 
-pid_file = Pathname.new(options[:pid_file])
-log_file = Pathname.new(options[:log_file])
+pid_file = Pathname.new(options.pid_file)
+log_file = Pathname.new(options.log_file)
 
-Dir.chdir(directory)
+Dir.chdir(options.directory)
 
 begin
-	if options[:foreground]
+	if options.foreground
 		Daemon.lock(pid_file)
 	else
 		Daemon.daemonize(pid_file, log_file)
@@ -169,7 +159,7 @@ end
 minecraft = nil
 
 begin
-	minecraft = Minecraft.new(options[:command], :startup_timeout => options[:startup_timeout], :command_timeout => options[:command_timeout])
+	minecraft = Minecraft.new(options.command, :startup_timeout => options.startup_timeout, :command_timeout => options.command_timeout)
 
 	TextCollector.for(minecraft) do
 		start
@@ -177,7 +167,7 @@ begin
 		puts msg
 	end
 rescue Minecraft::StartupFailedError => e
-	puts "Error: failed to start minecraft with '#{options[:command]}' in '#{directory}': #{e}"
+	puts "Error: failed to start minecraft with '#{options.command}' in '#{options.directory}': #{e}"
 	exit 3
 rescue => e
 	puts "Error: #{e}"
@@ -185,10 +175,10 @@ rescue => e
 end
 
 sinatra = Sinatra.new
-sinatra.set :port, options[:port]
-sinatra.set :bind, options[:bind]
+sinatra.set :port, options.port
+sinatra.set :bind, options.bind
 sinatra.set :environment, 'production'
-sinatra.set :server, ['mongrel']
+sinatra.set :server, options.server
 sinatra.set :lock, true
 
 APIBuilder.new(sinatra, 'minecraft control server API') do
@@ -279,7 +269,7 @@ end
 begin
 	sinatra.run!
 rescue Errno::EACCES, Errno::EADDRNOTAVAIL, SocketError => e
-	puts "Error: failed to bind HTTP server socket (#{options[:bind]}): #{e}"
+	puts "Error: failed to bind HTTP server socket (#{options.bind}): #{e}"
 	exit 5
 ensure
 	# make sure we stop the server on exit

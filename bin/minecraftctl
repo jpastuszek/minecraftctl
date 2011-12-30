@@ -1,46 +1,28 @@
 #!/usr/bin/ruby
 require 'rubygems'
-require 'micro-optparse'
+require 'cli'
 require 'httpclient'
 require 'thread'
 Thread.abort_on_exception = true
 
-options = Parser.new do |p|
-	p.banner = <<EOF
-Controls minecraft server started via minecraftctlserver
-
-Usage: #{$0} [options] command [arguments]
-
-Command has to start with '/'
-For available server commands type '#{$0} /'
-
-Options:
-EOF
-	p.option :server, 'minecraft control server address', :default => 'localhost'
-	p.option :port, 'minecraft control server port', :default => 25560
-end.process!
-
-command = ARGV.shift
-unless command
-	puts "command not specified, see '#{$0} -h' for help"
-	exit 1
+options = CLI.new do
+	option :server, :description => 'minecraft control server address', :default => 'localhost'
+	option :port, :description => 'minecraft control server port', :cast => Integer, :default => 25560
+	argument :command, :description => 'command to send to minecraft control server'
+	arguments :command_arguments, :description => 'command arguments to send to minecraft control server', :default => []
+end.parse! do |options|
+	fail "invalid command '#{options.command}', command has to start with '/'. Type '#{$0} /' to see available server commands" unless options.command =~ /^\//
 end
-unless command =~ /^\//
-	puts "invalid command '#{command}', command has to start with '/'. Type '#{$0} /' to see available server commands"
-	exit 1 
-end
-
-args = ARGV
 
 c = HTTPClient.new
 
 begin
-	if args.empty?
-		c.get_async("http://#{options[:server]}:#{options[:port]}#{command}").pop.content.each do |line|
+	if options.command_arguments.empty?
+		c.get_async("http://#{options.server}:#{options.port}#{options.command}").pop.content.each do |line|
 			puts line
 		end
 	else
-		c.post_async("http://#{options[:server]}:#{options[:port]}#{command}", args.join("\n")).pop.content.each do |line|
+		c.post_async("http://#{options.server}:#{options.port}#{options.command}", options.command_arguments.join("\n")).pop.content.each do |line|
 			puts line
 		end
 	end
