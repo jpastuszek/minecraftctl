@@ -9,7 +9,7 @@ options = CLI.new do
 	option :server, :description => 'minecraft control server address', :default => 'localhost'
 	option :port, :description => 'minecraft control server port', :cast => Integer, :default => 25560
 	argument :command, :description => 'command to send to minecraft control server'
-	arguments :command_arguments, :description => 'command arguments to send to minecraft control server', :default => []
+	arguments :command_arguments, :required => false
 end.parse! do |options|
 	fail "invalid command '#{options.command}', command has to start with '/'. Type '#{$0} /' to see available server commands" unless options.command =~ /^\//
 end

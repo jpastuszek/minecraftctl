@@ -6,7 +6,7 @@ gem "httpclient", ">= 2.2.1"
 gem "mongrel", ">= 1.1.5"
 gem "mongrel", ">= 1.1.5"
 gem "daemon", "~> 1"
-gem "cli", "~> 0.4.0"
+gem "cli", "~> 1.1.0"
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
