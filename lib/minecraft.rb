@@ -195,7 +195,7 @@ class Minecraft
 					end
 
 					wait_msg(false, @startup_timeout) do |m|
-						m.msg =~ /Done \(([^n]*)ns\)!/ or m.msg =~ /Minecraft exits/
+						m.msg =~ /Done \(.*\)!/ or m.msg =~ /Minecraft exits/
 					end
 
 					unless running?
