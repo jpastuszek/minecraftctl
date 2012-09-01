@@ -1,128 +1,10 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 require 'rubygems'
 require 'cli'
-require 'open3'
-require 'thread'
 require 'pathname'
 require 'daemon'
-require 'sinatra/base'
 
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-
-require 'minecraft'
-require 'message_collector'
-
-class MessageCollectorProcessed < MessageCollector
-	def initialize(&operations)
-		super(&operations)
-		@processors = []
-	end
-
-	def process(&block)
-		@processors << block
-		self
-	end
-
-	def collect(msg)
-		@processors.each do |processor|
-			msg = processor.call(msg)
-		end
-		@collector.call(msg) if msg
-	end
-end
-
-class TextCollector < MessageCollectorProcessed
-	def initialize(&operations)
-		super
-		process do |msg|
-			msg.to_s + "\n"
-		end
-	end
-end
-
-class APIBuilder
-	def initialize(sinatra, description, path = '', &block)
-		@sinatra = sinatra
-		@description = description
-
-		@dsl = DSL.new(sinatra, path, &block).data
-		@path = path
-		root = self
-
-		@sinatra.get(root_path) do
-			root.help.join("\n") + "\n"
-		end
-
-		@dsl.gets.each do |op|
-			@sinatra.get(path + '/' + op.name, &op.block)
-		end
-
-		post_map = {}
-
-		@dsl.posts.each do |op|
-			post_map[op.name] = op
-		end
-
-		@sinatra.post(root_path) do
-			cmd, *args = request.body.read.split(' ')
-			op = post_map[cmd] or return [400, "Unknown argument: #{cmd} for request: #{request.path_info}\n"]
-			op.block.call(args)
-		end
-	end
-
-	def root_path
-		@path.empty? ? '/' : @path
-	end
-
-	def help
-		out = []
-		out << "#{root_path} - #{@description}"
-
-		@dsl.posts.each do |op|
-			out << "#{root_path} #{op.name} - #{op.description}"
-		end
-
-		@dsl.gets.each do |op|
-			out << "#{@path}/#{op.name} - #{op.description}"
-		end
-
-		@dsl.paths.each do |path|
-			out += path.help
-		end
-
-		out
-	end
-
-	class DSL
-		OP = Struct.new(:name, :description, :block)
-		def initialize(sinatra, path, &block)
-			@sinatra = sinatra
-			@path = path
-
-			@gets = []
-			@posts = []
-			@paths = []
-
-			instance_eval(&block)
-		end
-
-		def data
-			Struct.new(:gets, :posts, :paths).new(@gets, @posts, @paths)
-		end
-
-		def get(name, description, &block)
-			@gets << OP.new(name, description, block)
-		end
-
-		def post(name, description, &block)
-			@posts << OP.new(name, description, block)
-		end
-
-		def path(name, description, &block)
-			@paths << APIBuilder.new(@sinatra, description, @path + '/' + name, &block)
-		end
-	end
-end
+require_relative '../lib/minecraftctl'
 
 options = CLI.new do
 	description "Lounches minecraft server that can be controlled via HTTP"
@@ -130,7 +12,7 @@ options = CLI.new do
 	option :port,				:short => :p, :description => 'TCP port number on which the HTTP control server will be listening', :cast => Integer, :default => 25560
 	option :bind,				:short => :b, :description => 'IP address of interface on which the HTTP control server will be listening on; use 0.0.0.0 to bind to all interfaces', :default => '127.0.0.1'
 	option :server,				:short => :s, :description => 'HTTP server to use', :default => 'mongrel'
-	option :foreground,			:short => :f, :description => 'don\'t daemonize, stay in foreground'
+	switch :foreground,			:short => :f, :description => 'don\'t daemonize, stay in foreground'
 	option :pid_file,			:short => :P, :description => 'pid file relative to minecraft server direcotry', :default => 'minecraftctlserver.pid'
 	option :log_file,			:short => :l, :description => 'log file relative to minecraft server directory where daemon messages will be written', :default => 'minecraftctlserver.log'
 	option :startup_timeout,	:short => :S, :description => 'time in seconds after which the control server will exit with error while waiting for minecraft to start up', :cast => Integer, :default => 120
@@ -159,115 +41,28 @@ end
 minecraft = nil
 
 begin
-	minecraft = Minecraft.new(options.command, :startup_timeout => options.startup_timeout, :command_timeout => options.command_timeout)
-
-	TextCollector.for(minecraft) do
-		start
-	end.each do |msg|
-		puts msg
+	minecraft = MCServer.new(options.command, :startup_timeout => options.startup_timeout, :command_timeout => options.command_timeout)
+	minecraft.start do |message|
+		puts message
 	end
-rescue Minecraft::StartupFailedError => e
-	puts "Error: failed to start minecraft with '#{options.command}' in '#{options.directory}': #{e}"
-	exit 3
+
+	minecraft.console('help') do |message|
+		puts message
+	end
+
+	minecraft.stop do |message|
+		puts message
+	end
+#rescue Minecraft::StartupFailedError => e
+	#puts "Error: failed to start minecraft with '#{options.command}' in '#{options.directory}': #{e}"
+	#exit 3
 rescue => e
+	p e
 	puts "Error: #{e}"
 	exit 4
 end
 
-sinatra = Sinatra.new
-sinatra.set :port, options.port
-sinatra.set :bind, options.bind
-sinatra.set :environment, 'production'
-sinatra.set :server, options.server
-sinatra.set :lock, true
-
-APIBuilder.new(sinatra, 'minecraft control server API') do
-	#get 'inspect', 'internal representation of output data' do
-		#minecraft.history.map{|m| m.inspect}.join("\n") + "\n"
-	#end
-
-	get 'dir', 'minecraft directory' do
-		Dir.pwd + "\n"
-	end
-
-	get 'pid', 'minecraft control server PID' do
-		Process.pid.to_s + "\n"
-	end
-
-	get 'pid_file', 'minecraft control server PID file' do
-		pid_file.realpath.to_s + "\n"
-	end
-
-	get 'log_file', 'minecraft control server log file' do
-		log_file.realpath.to_s + "\n"
-	end
-
-	get 'out', 'output generated by control and minecraft server' do
-		minecraft.history.join("\n") + "\n"
-	end
-
-	post 'shutdown', 'shutdown minecraft and control server' do
-		TextCollector.for(minecraft) do
-			minecraft.stop if minecraft.running?
-			log "Shutting down minecraftctlserver"
-
-			pid = Process.pid
-			Thread.new{Process.kill(15, pid)}
-		end
-	end
-
-	path 'server', 'minecraft server API'  do
-		get 'status', 'server status' do
-			if minecraft.running?
-				"running\n"
-			else
-				"stopped\n"
-			end
-		end
-
-		get 'pid', 'minecraft server PID' do
-			if minecraft.server_pid
-				minecraft.server_pid.to_s + "\n"
-			else
-				"Server not running\n"
-			end
-		end
-
-		post 'start', 'starts minecraft server' do
-			TextCollector.for(minecraft) do
-				start
-			end
-		end
-
-		post 'stop', 'stops minecraft server' do
-			TextCollector.for(minecraft) do
-				stop
-			end
-		end
-
-		post 'console', 'send console command' do |args|
-			next "Console command not specified; try 'console help'\n" if args.empty?
-			TextCollector.for(minecraft) do
-				begin
-					send(args.shift.tr('-', '_').to_sym, *args)
-				rescue Minecraft::ServerNotRunningError
-					log "Server not running"
-				end
-			end
-		end
-	end
-end
-
-sinatra.not_found do
-	"Unknown request: #{env['REQUEST_PATH']}\n"
-end
-
-sinatra.error do
-	"Error in minecraftctlserver while processing request '#{env['REQUEST_PATH']}': #{env['sinatra.error']}\n" 
-end
-
 begin
-	sinatra.run!
 rescue Errno::EACCES, Errno::EADDRNOTAVAIL, SocketError => e
 	puts "Error: failed to bind HTTP server socket (#{options.bind}): #{e}"
 	exit 5
