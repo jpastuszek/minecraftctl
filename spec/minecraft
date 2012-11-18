@@ -50,7 +50,8 @@ err '2011-09-10 12:59:01 [INFO] Preparing spawn area: 97%'
 err '2011-09-10 12:59:01 [INFO] Done (5887241893ns)! For help, type "help" or "?"'
 
 expect 'list' do
-	err '2011-09-20 14:42:04 [INFO] Connected players: kazuya'
+	err '2012-11-18 16:35:34 [INFO] There are 2/20 players online:'
+	err '2012-11-18 16:35:34 [INFO] kazuya, emila'
 end
 
 expect 'stop' do
@@ -60,29 +61,22 @@ expect 'stop' do
 	exit
 end
 
-expect 'help' do
-	err '2011-09-21 13:33:46 [INFO] To run the server without a gui, start it like this:'
-	err '2011-09-21 13:33:46 [INFO]    java -Xmx1024M -Xms1024M -jar minecraft_server.jar nogui'
-	err '2011-09-21 13:33:46 [INFO] Console commands:'
-	err '2011-09-21 13:33:46 [INFO]    help  or  ?               shows this message'
-	err '2011-09-21 13:33:46 [INFO]    kick <player>             removes a player from the server'
-	err '2011-09-21 13:33:46 [INFO]    ban <player>              bans a player from the server'
-	err '2011-09-21 13:33:46 [INFO]    pardon <player>           pardons a banned player so that they can connect again'
-	err '2011-09-21 13:33:46 [INFO]    ban-ip <ip>               bans an IP address from the server'
-	err '2011-09-21 13:33:46 [INFO]    pardon-ip <ip>            pardons a banned IP address so that they can connect again'
-	err '2011-09-21 13:33:46 [INFO]    op <player>               turns a player into an op'
-	err '2011-09-21 13:33:46 [INFO]    deop <player>             removes op status from a player'
-	err '2011-09-21 13:33:46 [INFO]    tp <player1> <player2>    moves one player to the same location as another player'
-	err '2011-09-21 13:33:46 [INFO]    give <player> <id> [num]  gives a player a resource'
-	err '2011-09-21 13:33:46 [INFO]    tell <player> <message>   sends a private message to a player'
-	err '2011-09-21 13:33:46 [INFO]    stop                      gracefully stops the server'
-	err '2011-09-21 13:33:46 [INFO]    save-all                  forces a server-wide level save'
-	err '2011-09-21 13:33:46 [INFO]    save-off                  disables terrain saving (useful for backup scripts)'
-	err '2011-09-21 13:33:46 [INFO]    save-on                   re-enables terrain saving'
-	err '2011-09-21 13:33:46 [INFO]    list                      lists all currently connected players'
-	err '2011-09-21 13:33:46 [INFO]    say <message>             broadcasts a message to all players'
-	err '2011-09-21 13:33:46 [INFO]    time <add|set> <amount>   adds to or sets the world time (0-24000)'
-	err '2011-09-21 13:33:46 [INFO]    gamemode <player> <mode>  sets player\'s game mode (0 or 1)'
+expect 'help' do |cmd|
+	case cmd
+	when 'help'
+		err '2012-11-18 15:53:28 [INFO] Usage: /help [page|command name]'
+	when 'list'
+		err '2012-11-18 16:38:40 [INFO] Usage: /list'
+	else
+		err '2012-11-18 15:54:44 [INFO] --- Showing help page 1 of 5 (/help <page>) ---'
+		err '2012-11-18 15:54:44 [INFO] /ban <name> [reason ...]'
+		err '2012-11-18 15:54:44 [INFO] /ban-ip <address|name> [reason ...]'
+		err '2012-11-18 15:54:44 [INFO] /banlist [ips|players]'
+		err '2012-11-18 15:54:44 [INFO] /clear <player> [item] [data]'
+		err '2012-11-18 15:54:44 [INFO] /debug'
+		err '2012-11-18 15:54:44 [INFO] /defaultgamemode <mode>'
+		err '2012-11-18 15:54:44 [INFO] /deop <player>'
+	end
 end
 
 expect 'say' do |*args|
