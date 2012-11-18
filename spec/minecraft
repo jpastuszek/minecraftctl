@@ -1,17 +1,25 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 
-$delay = ARGV[0]
+require 'cli'
+
+settings = CLI.new do
+	option :delay,
+		cast: Float
+	switch :exit
+end.parse!
+
+$delay = settings.delay
 
 def out(line)
 	STDOUT << line + "\n"
 	STDOUT.flush
-	sleep $delay.to_f if $delay
+	sleep $delay if $delay
 end
 
 def err(line)
 	STDERR << line + "\n"
 	STDERR.flush
-	sleep $delay.to_f if $delay
+	sleep $delay if $delay
 end
 
 $expects = {}
@@ -92,6 +100,8 @@ expect 'stream' do
 		sleep 1
 	end
 end
+
+exit if settings.exit
 
 loop do
 	cmd, *args = STDIN.gets.split(' ')
